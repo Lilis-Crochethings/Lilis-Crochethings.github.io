@@ -241,6 +241,8 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
 <style>
   .nav {
+    position: relative;
+    z-index: 20;
     background: var(--background);
     border-bottom: 1px solid var(--primary);
   }
@@ -527,6 +529,15 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     .hamburger {
       display: flex;
       order: 3;
+    }
+
+    /* Expanded search is position:absolute, anchored to the same right
+       edge (right: 1.25rem, from the ≤1024px rule) the hamburger would
+       otherwise occupy — the two would sit on top of each other. Hide the
+       hamburger while searching; the search box's own close button already
+       covers "exit search", matching typical mobile search UX. */
+    .nav-inner:has(.nav-search.expanded) .hamburger {
+      display: none;
     }
 
     .nav-search {
