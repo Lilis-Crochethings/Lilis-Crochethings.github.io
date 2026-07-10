@@ -1,34 +1,18 @@
 ---
-// src/components/cards/CreationsCard.astro
+// src/components/main/CreationsCard.astro
+import { toThumb } from "../../lib/images";
 const { creations } = Astro.props;
-
-const rowA = creations.filter((_: any, i: number) => i % 3 === 0);
-const rowB = creations.filter((_: any, i: number) => i % 3 === 1).reverse();
-const rowC = creations.filter((_: any, i: number) => i % 3 === 2);
 ---
 
 <a class="card" href="/creations">
   <h2>Creations</h2>
 
-  <div class="marquee">
-    <div class="row row-1">
-      <div class="track track-left" style={`--count: ${rowA.length}`}>
-        {rowA.map((c: any) => (<img src={c.image} alt={c.title} loading="lazy" decoding="async" />))}
-        {rowA.map((c: any) => (<img src={c.image} alt="" aria-hidden="true" loading="lazy" decoding="async" />))}
+  <div class="grid">
+    {creations.map((c: any) => (
+      <div class="imgWrap">
+        <img src={toThumb(c.image)} alt={c.title} loading="lazy" decoding="async" />
       </div>
-    </div>
-    <div class="row row-2">
-      <div class="track track-right" style={`--count: ${rowB.length}`}>
-        {rowB.map((c: any) => (<img src={c.image} alt={c.title} loading="lazy" decoding="async" />))}
-        {rowB.map((c: any) => (<img src={c.image} alt="" aria-hidden="true" loading="lazy" decoding="async" />))}
-      </div>
-    </div>
-    <div class="row row-3">
-      <div class="track track-left" style={`--count: ${rowC.length}`}>
-        {rowC.map((c: any) => (<img src={c.image} alt={c.title} loading="lazy" decoding="async" />))}
-        {rowC.map((c: any) => (<img src={c.image} alt="" aria-hidden="true" loading="lazy" decoding="async" />))}
-      </div>
-    </div>
+    ))}
   </div>
 </a>
 
@@ -44,68 +28,21 @@ const rowC = creations.filter((_: any, i: number) => i % 3 === 2);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.marquee {
-  --img-size: 140px;
-  --seconds-per-image: 4.5s;
-  display: flex;
-  flex-direction: column;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
 }
 
-.row {
-  overflow: hidden;
-  border-radius: 10px;
-}
-
-.track {
-  display: flex;
-  gap: 10px;
-  width: max-content;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-duration: calc(var(--seconds-per-image) * var(--count));
-}
-
-.track-left {
-  animation-name: scroll-left;
-}
-
-.track-right {
-  animation-name: scroll-right;
-}
-
-.track img {
-  width: var(--img-size);
+.imgWrap img {
+  width: 100%;
+  max-width: 150px;
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 10px;
-  flex-shrink: 0;
-}
-
-@media (min-width: 768px) {
-  .marquee {
-    --img-size: 220px;
-    --seconds-per-image: 7s;
-  }
-}
-
-@keyframes scroll-left {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-@keyframes scroll-right {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
 }
 
 .card:hover {
   transform: scale(1.01);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .track-left, .track-right {
-    animation: none;
-  }
 }
 </style>

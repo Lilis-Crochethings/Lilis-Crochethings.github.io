@@ -36,7 +36,17 @@ const organizationSchema = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Preload the fonts used above the fold on every page (body text +
+         headings) so the browser starts fetching them immediately instead
+         of discovering the @font-face URLs only after CSS is parsed. -->
+    <link rel="preload" href="/fonts/Quicksand-Variable.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/Lili Love-Regular.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/fonts/Lili Love-Bold.otf" as="font" type="font/otf" crossorigin />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -68,6 +78,8 @@ const organizationSchema = {
 </html>
 
 <style>
+@import "../styles/breakpoints.css";
+
 #scroll-to-top {
   position: fixed;
   right: 1.5rem;
@@ -98,7 +110,7 @@ const organizationSchema = {
   transform: translateY(0);
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   #scroll-to-top {
     width: 56px;
     height: 56px;

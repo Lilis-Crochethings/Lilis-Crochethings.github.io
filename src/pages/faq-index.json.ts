@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getFaqDocs } from "../lib/faq";
+import { getFaqDocs } from "../lib/faq-data";
 
 export const prerender = true;
 

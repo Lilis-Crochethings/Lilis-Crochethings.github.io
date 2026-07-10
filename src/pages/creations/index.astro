@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import CreationCard from '../../components/creations/CreationCard.astro';
 import CreationListItem from '../../components/creations/CreationListItem.astro';
 import { getCollection } from "astro:content";
 import { getEffectiveTags } from "../../lib/tags";
@@ -25,16 +24,6 @@ const creationsWithTags = creations.map((creation) => ({
     <div class="content-header">
       <h1>Creations</h1>
       <div class="content-controls">
-        <div class="view-toggle" role="group" aria-label="View mode">
-          <span class="view-toggle-thumb" aria-hidden="true"></span>
-          <button type="button" data-view="gallery" class="active" aria-pressed="true" aria-label="Gallery view">
-            <span class="icon icon-gallery"></span>
-          </button>
-          <button type="button" data-view="list" aria-pressed="false" aria-label="List view">
-            <span class="icon icon-list"></span>
-          </button>
-        </div>
-
         <button id="filters-toggle" type="button" class="filters-btn" aria-expanded="false">
           <span class="icon icon-filter"></span>
           Filters
@@ -43,28 +32,12 @@ const creationsWithTags = creations.map((creation) => ({
     </div>
 
     <div class="content">
-      <div class="grid" id="gallery-view">
-        {creationsWithTags.map(({ creation, effectiveTags }) => (
-          <CreationCard creation={creation} tags={effectiveTags} />
-        ))}
-      </div>
-      <div class="list" id="list-view" hidden>
+      <div class="list" id="list-view">
         {creationsWithTags.map(({ creation, effectiveTags }) => (
           <CreationListItem creation={creation} effectiveTags={effectiveTags} taxonomy={taxonomy} />
         ))}
       </div>
     </div>
-
-    <script is:inline>
-      // Runs synchronously during parsing, before first paint, so a saved
-      // "list" preference doesn't flash the default gallery view first.
-      (function () {
-        if (localStorage.getItem('creations-view-mode') === 'list') {
-          document.getElementById('gallery-view')?.setAttribute('hidden', '');
-          document.getElementById('list-view')?.removeAttribute('hidden');
-        }
-      })();
-    </script>
 
     <aside class="filters-panel" id="filters-panel">
       <div class="filters-panel-inner">
@@ -153,6 +126,8 @@ const creationsWithTags = creations.map((creation) => ({
 </BaseLayout>
 
 <style>
+@import "../../styles/breakpoints.css";
+
 .content-header {
   display: flex;
   align-items: center;
@@ -170,72 +145,6 @@ const creationsWithTags = creations.map((creation) => ({
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-.view-toggle {
-  position: relative;
-  display: flex;
-  gap: 2px;
-  background: var(--background);
-  border: 1.5px solid var(--primary);
-  border-radius: 999px;
-  padding: 2px;
-  box-sizing: border-box;
-}
-
-.view-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  width: 0;
-  background: var(--primary);
-  border-radius: 999px;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), width 0.25s ease;
-}
-
-.view-toggle button {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 999px;
-  color: var(--text);
-  background: none;
-  padding: 0.5rem;
-  cursor: var(--cursor-pointer);
-}
-
-.view-toggle .icon {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  background-color: var(--primary);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  transition: background-color 0.25s ease;
-}
-
-.view-toggle button.active .icon {
-  background-color: white;
-}
-
-.icon-gallery {
-  mask-image: url(/images/icons/gallery.svg);
-  -webkit-mask-image: url(/images/icons/gallery.svg);
-}
-
-.icon-list {
-  width: 13px;
-  height: 13px;
-  mask-image: url(/images/icons/list.svg);
-  -webkit-mask-image: url(/images/icons/list.svg);
 }
 
 .filters-btn .icon {
@@ -268,7 +177,7 @@ const creationsWithTags = creations.map((creation) => ({
   border: 1.5px solid var(--primary);
   border-radius: 999px;
   background: none;
-  color: var(--primary);
+  color: var(--primary-text);
   padding: 0.5rem 0.9rem 0.4rem;
   font: inherit;
   font-family: "Quicksand", sans-serif;
@@ -285,7 +194,7 @@ const creationsWithTags = creations.map((creation) => ({
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr var(--sidebar-width);
   grid-template-rows: auto 1fr;
   column-gap: 1.5rem;
   row-gap: 1rem;
@@ -309,20 +218,10 @@ const creationsWithTags = creations.map((creation) => ({
   grid-row: 2;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
 .list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.grid[hidden], .list[hidden] {
-  display: none;
 }
 
 .filters-panel {
@@ -388,7 +287,7 @@ const creationsWithTags = creations.map((creation) => ({
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--primary);
+  color: var(--primary-text);
   opacity: 0.75;
   margin: 0 0 0.6rem;
 }
@@ -422,7 +321,7 @@ const creationsWithTags = creations.map((creation) => ({
 .reset-filters {
   border: none;
   background: none;
-  color: var(--primary);
+  color: var(--primary-text);
   font-family: "Quicksand", sans-serif;
   font-size: 0.9rem;
   font-weight: bold;
@@ -436,6 +335,9 @@ const creationsWithTags = creations.map((creation) => ({
 
 .close-filters {
   display: none;
+  /* iOS Safari tints unstyled buttons with the system accent (blue) when no
+     color is set explicitly — this button only had font-size/line-height. */
+  color: var(--primary-text);
 }
 
 .sort-options {
@@ -504,7 +406,7 @@ const creationsWithTags = creations.map((creation) => ({
   justify-content: center;
   border: none;
   background: none;
-  color: var(--primary);
+  color: var(--primary-text);
   padding: 0.25rem;
   cursor: var(--cursor-pointer);
   flex-shrink: 0;
@@ -551,7 +453,7 @@ const creationsWithTags = creations.map((creation) => ({
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12,21.35l-1.45-1.32C5.4,15.36,2,12.28,2,8.5 2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09C13.09,3.81,14.76,3,16.5,3 19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z'/%3E%3C/svg%3E");
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   .content-controls {
     width: 100%;
     justify-content: space-between;
@@ -560,11 +462,6 @@ const creationsWithTags = creations.map((creation) => ({
 
   .layout {
     grid-template-columns: 1fr;
-  }
-
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
   }
 
   .filters-btn {
@@ -617,15 +514,11 @@ const creationsWithTags = creations.map((creation) => ({
   }
 }
 
-/* iPad held upright: enough width for a 3-across gallery and a wide filters
-   sheet, but still not enough to keep the filters sidebar docked on the right. */
-@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+/* iPad held upright: enough width for a wide filters sheet, but still not
+   enough to keep the filters sidebar docked on the right. */
+@media (--tablet-only) and (orientation: portrait) {
   .layout {
     grid-template-columns: 1fr;
-  }
-
-  .grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 
   .filters-btn {
@@ -688,54 +581,7 @@ const creationsWithTags = creations.map((creation) => ({
 </style>
 
 <script>
-  const SCROLL_KEY = 'creations-scroll';
-  const VIEW_KEY = 'creations-view-mode';
-
-  const savedScroll = sessionStorage.getItem(SCROLL_KEY);
-  if (savedScroll) {
-    window.scrollTo(0, parseInt(savedScroll, 10));
-  }
-
-  window.addEventListener('scroll', () => {
-    sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
-  }, { passive: true });
-
-  const galleryView = document.getElementById('gallery-view');
   const listView = document.getElementById('list-view');
-  const viewButtons = document.querySelectorAll<HTMLButtonElement>('.view-toggle button');
-  const viewToggleThumb = document.querySelector<HTMLElement>('.view-toggle-thumb');
-
-  function moveThumb(activeButton: HTMLButtonElement | undefined) {
-    if (!viewToggleThumb || !activeButton) return;
-    viewToggleThumb.style.width = `${activeButton.offsetWidth}px`;
-    viewToggleThumb.style.transform = `translateX(${activeButton.offsetLeft - 2}px)`;
-  }
-
-  function setView(mode: string) {
-    const isGallery = mode === 'gallery';
-    galleryView?.toggleAttribute('hidden', !isGallery);
-    listView?.toggleAttribute('hidden', isGallery);
-    let activeButton: HTMLButtonElement | undefined;
-    viewButtons.forEach((btn) => {
-      const active = btn.dataset.view === mode;
-      btn.classList.toggle('active', active);
-      btn.setAttribute('aria-pressed', String(active));
-      if (active) activeButton = btn;
-    });
-    moveThumb(activeButton);
-    localStorage.setItem(VIEW_KEY, mode);
-  }
-
-  viewButtons.forEach((btn) => {
-    btn.addEventListener('click', () => setView(btn.dataset.view ?? 'gallery'));
-  });
-
-  window.addEventListener('resize', () => {
-    const active = Array.from(viewButtons).find((btn) => btn.classList.contains('active'));
-    moveThumb(active);
-  });
-
-  setView(localStorage.getItem(VIEW_KEY) ?? 'gallery');
 
   const SORT_KEY = 'creations-sort-order';
   const FILTERS_KEY = 'creations-filters';
@@ -748,7 +594,14 @@ const creationsWithTags = creations.map((creation) => ({
     const [field, direction] = sortMode.split('-');
     const key = field === 'time' ? 'hours' : 'date';
     const ascending = direction === 'asc';
-    const items = Array.from(container.children) as HTMLElement[];
+    // Not container.children — CreationListItem.astro's own <script> tag
+    // gets hoisted in-place as a sibling of the .list-item-wrap elements it
+    // renders (Astro inlines a component's script once, at its first usage
+    // in the loop), so it shows up as a non-element-with-a-dataset child
+    // here. Sorting that in among real items via Number(undefined) = NaN
+    // comparisons throws items near it out of order — Void Chicken sticking
+    // to the top of every sort was this in action.
+    const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .list-item-wrap'));
     items.sort((a, b) => {
       const valueA = Number(a.dataset[key]);
       const valueB = Number(b.dataset[key]);
@@ -762,7 +615,6 @@ const creationsWithTags = creations.map((creation) => ({
       if (!radio.checked) return;
       sortMode = radio.value;
       sessionStorage.setItem(SORT_KEY, radio.value);
-      sortContainer(galleryView);
       sortContainer(listView);
     });
   });
@@ -773,7 +625,6 @@ const creationsWithTags = creations.map((creation) => ({
     if (radioToSelect) {
       radioToSelect.checked = true;
       sortMode = savedSort;
-      sortContainer(galleryView);
       sortContainer(listView);
     }
   }
@@ -800,15 +651,12 @@ const creationsWithTags = creations.map((creation) => ({
     const selectedTags = Array.from(tagCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
     const selectedDifficulties = Array.from(difficultyCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
     filtersToggle?.classList.toggle('active', selectedTags.length > 0 || selectedDifficulties.length > 0);
-    for (const container of [galleryView, listView]) {
-      if (!container) continue;
-      const items = Array.from(container.children) as HTMLElement[];
-      for (const item of items) {
-        const itemTags = (item.dataset.tags ?? '').split(' ').filter(Boolean);
-        const tagsMatch = selectedTags.length === 0 || selectedTags.some((tag) => itemTags.includes(tag));
-        const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(item.dataset.difficulty ?? '');
-        item.style.display = tagsMatch && difficultyMatch ? '' : 'none';
-      }
+    const items = listView ? Array.from(listView.querySelectorAll<HTMLElement>(':scope > .list-item-wrap')) : [];
+    for (const item of items) {
+      const itemTags = (item.dataset.tags ?? '').split(' ').filter(Boolean);
+      const tagsMatch = selectedTags.length === 0 || selectedTags.some((tag) => itemTags.includes(tag));
+      const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(item.dataset.difficulty ?? '');
+      item.style.display = tagsMatch && difficultyMatch ? '' : 'none';
     }
   }
 

@@ -19,6 +19,8 @@ const paragraphs = Array.isArray(bio) ? bio : [bio];
 </a>
 
 <style>
+@import "../../styles/breakpoints.css";
+
 .card {
   display: block;
   padding: 2rem;
@@ -70,7 +72,7 @@ h2 {
   margin-top: 0;
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   .content {
     flex-direction: column;
     align-items: center;

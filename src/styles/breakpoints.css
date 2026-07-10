@@ -1,0 +1,14 @@
+/* Single source of truth for the site's breakpoints, imported into every
+   stylesheet via postcss-custom-media (see postcss.config.mjs).
+   Change the numbers here to move a breakpoint everywhere at once. */
+@custom-media --mobile (max-width: 650px);
+@custom-media --tablet-up (min-width: 651px);
+@custom-media --tablet-max (max-width: 1024px);
+@custom-media --tablet-only (min-width: 651px) and (max-width: 1024px);
+@custom-media --desktop-up (min-width: 1025px);
+
+/* Nav-specific: the nav-links list now has one more item (Gallery), so the
+   navbar needs to drop into its collapsed iPad layout (hidden wordmark,
+   icon-only search) earlier than the general --tablet-max cutoff or the
+   extra item pushes the search bar into wrapping. */
+@custom-media --nav-collapse (max-width: 1085px);

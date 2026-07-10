@@ -1,25 +1,48 @@
 ---
-const { creation, tags = [] } = Astro.props as {
+import { toThumb } from "../../lib/images";
+
+const { creation } = Astro.props as {
   creation: any;
-  tags?: string[];
 };
+
+const images: string[] = creation.data.images;
+const thumbs = images.map(toThumb);
+const hasMultiple = thumbs.length > 1;
+const imagesJson = JSON.stringify(thumbs).replace(/</g, "\\u003c");
 ---
 
-<a class="card" href={`/creations/${creation.id}`} data-date={creation.data.date?.getTime() ?? 0} data-hours={creation.data.hoursSpent ?? 0} data-tags={tags.join(" ")} data-difficulty={creation.data.difficulty}>
-  <div class="imgWrap">
-    <img src={creation.data.images[0]} alt={creation.data.title} loading="lazy" decoding="async" />
-  </div>
-</a>
+<div class="card" data-images={imagesJson}>
+  <a class="card-link" href={`/creations/${creation.id}`}>
+    <div class="imgWrap">
+      <img class="card-img" src={thumbs[0]} alt={creation.data.title} loading="lazy" decoding="async" />
+    </div>
+  </a>
+
+  {hasMultiple && (
+    <>
+      <button type="button" class="tile-nav prev" aria-label="Previous image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <button type="button" class="tile-nav next" aria-label="Next image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </>
+  )}
+</div>
 
 <style>
 .card {
-  display: block;
+  position: relative;
   border-radius: 16px;
-  text-decoration: none;
-  color: inherit;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   overflow: hidden;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .imgWrap {
@@ -37,4 +60,80 @@ const { creation, tags = [] } = Astro.props as {
   transform: scale(1.04);
   box-shadow: 0 16px 32px rgba(0,0,0,0.2);
 }
+
+.tile-nav {
+  position: absolute;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: var(--cursor-pointer);
+  opacity: 0;
+  /* Off (not just invisible) until actually revealed below — otherwise this
+     still intercepts clicks meant for the image/link underneath wherever
+     its hidden position happens to overlap it (its slide-out transform
+     leaves it partly over the image edge even at opacity:0). */
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
+}
+
+.tile-nav:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.tile-nav svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tile-nav.prev {
+  left: 6px;
+  transform: translate(-14px, -50%);
+}
+
+.tile-nav.next {
+  right: 6px;
+  transform: translate(14px, -50%);
+}
+
+/* Slide-in-on-hover only makes sense where hover is a real, mouse-driven
+   gesture — touch devices get swipe-to-flip instead (see the script below),
+   so the buttons stay hidden there rather than being permanently stuck
+   half-visible with nothing to trigger them. Keyboard focus still reveals
+   them regardless of input type. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .tile-nav {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(0, -50%);
+  }
+}
+
+.tile-nav:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, -50%);
+}
 </style>
+
+<script>
+  import { initTileCarousel } from "../../lib/tileCarousel";
+
+  document.querySelectorAll<HTMLElement>(".card[data-images]").forEach((root) => {
+    const viewport = root.querySelector<HTMLElement>(".imgWrap");
+    const img = root.querySelector<HTMLImageElement>(".card-img");
+    const link = root.querySelector<HTMLAnchorElement>(".card-link");
+    const prevBtn = root.querySelector<HTMLButtonElement>(".tile-nav.prev");
+    const nextBtn = root.querySelector<HTMLButtonElement>(".tile-nav.next");
+    if (!viewport || !img) return;
+
+    initTileCarousel({ root, viewport, img, swipeTarget: root, link, prevBtn, nextBtn });
+  });
+</script>

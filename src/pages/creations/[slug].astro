@@ -135,7 +135,7 @@ const creativeWorkSchema = {
 
   <a class="back-link" id="back-link" href="/creations">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5 8 12l7 7"/></svg>
-    Creations
+    Back
   </a>
 
   <h1>{data.title}</h1>
@@ -292,11 +292,16 @@ const creativeWorkSchema = {
   </div>
 
   <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightbox-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
     <div class="lightbox-content">
       <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Previous image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5 8 12l7 7"/></svg>
       </button>
-      <img id="lightbox-img" src="" alt="" />
+      <div class="lightbox-frame" id="lightbox-frame">
+        <img id="lightbox-img" src="" alt="" />
+      </div>
       <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Next image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
       </button>
@@ -305,8 +310,15 @@ const creativeWorkSchema = {
 </BaseLayout>
 
 <script>
+  import { initLightboxNav } from "../../lib/lightboxNav";
+
+  // Same-origin referrer (any page, not just /creations or /gallery) means
+  // there's real history to go back to — e.g. arriving via a "See also"
+  // card from another creation should return to that creation, not jump
+  // to an overview page. Falls back to the plain /creations link below
+  // for direct visits, new tabs, or external referrers.
   const backLink = document.getElementById("back-link") as HTMLAnchorElement;
-  if (document.referrer && new URL(document.referrer).pathname.replace(/\/$/, "") === "/creations") {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
     backLink?.addEventListener("click", (e) => {
       e.preventDefault();
       history.back();
@@ -314,64 +326,67 @@ const creativeWorkSchema = {
   }
 
   const lightbox = document.getElementById("lightbox");
+  const lightboxFrame = document.getElementById("lightbox-frame") as HTMLElement;
   const lightboxImg = document.getElementById("lightbox-img") as HTMLImageElement;
+  const closeBtn = document.getElementById("lightbox-close");
   const prevBtn = document.getElementById("lightbox-prev");
   const nextBtn = document.getElementById("lightbox-next");
 
   const thumbs = Array.from(document.querySelectorAll<HTMLImageElement>(".gallery-thumb"));
-  let currentIndex = 0;
 
   if (thumbs.length <= 1) {
     prevBtn?.classList.add("hidden");
     nextBtn?.classList.add("hidden");
   }
 
-  function showImage(index: number) {
-    currentIndex = (index + thumbs.length) % thumbs.length;
-    lightboxImg.src = thumbs[currentIndex].src;
-    lightboxImg.alt = thumbs[currentIndex].alt;
-  }
+  const nav = lightbox
+    ? initLightboxNav({
+        swipeTarget: lightbox,
+        frame: lightboxFrame,
+        img: lightboxImg,
+        prevBtn,
+        nextBtn,
+        items: thumbs.map((thumb) => ({ src: thumb.src, alt: thumb.alt })),
+        freezeFrameSize: true,
+      })
+    : null;
 
   thumbs.forEach((thumb, index) => {
     thumb.addEventListener("click", () => {
-      showImage(index);
+      nav?.show(index);
       lightbox?.classList.add("open");
     });
   });
 
   function closeLightbox() {
     lightbox?.classList.remove("open");
-    lightboxImg.src = "";
   }
 
   lightbox?.addEventListener("click", closeLightbox);
 
-  prevBtn?.addEventListener("click", (e) => {
+  closeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    showImage(currentIndex - 1);
-  });
-
-  nextBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    showImage(currentIndex + 1);
+    closeLightbox();
   });
 
   document.addEventListener("keydown", (e) => {
     if (!lightbox?.classList.contains("open")) return;
     if (e.key === "Escape") closeLightbox();
-    if (e.key === "ArrowLeft") showImage(currentIndex - 1);
-    if (e.key === "ArrowRight") showImage(currentIndex + 1);
+    if (e.key === "ArrowLeft") nav?.prev();
+    if (e.key === "ArrowRight") nav?.next();
   });
 </script>
 
 <style>
+@import "../../styles/breakpoints.css";
+
 .back-link {
   font-family: "Lili Love", cursive;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 1rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: bold;
   font-size: 1.2rem;
 }
@@ -389,7 +404,7 @@ const creativeWorkSchema = {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr var(--sidebar-width);
   gap: 1.5rem;
   align-items: start;
 }
@@ -471,12 +486,26 @@ const creativeWorkSchema = {
   align-items: center;
 }
 
-.lightbox-content img {
+/* Rounding/clipping/shadow live here, one level in from .lightbox-content,
+   rather than on the <img> directly — otherwise the outgoing/incoming pair
+   would read as two separately-rounded images sliding past each other
+   instead of one framed window with the picture moving inside it. Sized to
+   shrink-wrap the image normally; only frozen to a fixed px size (via JS)
+   for the duration of a slide, since photos here vary in aspect ratio and
+   the sliding pair needs a stable shared box to animate within. */
+.lightbox-frame {
+  position: relative;
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-frame img {
   display: block;
   max-width: 80vw;
   max-height: 85vh;
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
 }
 
 .lightbox-nav {
@@ -519,6 +548,32 @@ const creativeWorkSchema = {
   margin-left: 2rem;
 }
 
+.lightbox-close {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  cursor: var(--cursor-pointer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2002;
+}
+
+.lightbox-close svg {
+  width: 22px;
+  height: 22px;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .socials-list {
   list-style: none;
   padding: 0;
@@ -531,9 +586,9 @@ const creativeWorkSchema = {
 
 .socials-list a {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.6rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .socials-list img {
@@ -572,7 +627,7 @@ const creativeWorkSchema = {
   justify-content: center;
   background: none;
   border: 1px solid var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   font-family: "Quicksand", sans-serif;
   font-weight: bold;
   font-size: 0.7rem;
@@ -646,7 +701,7 @@ div.yarn-tile .line-name {
   clear: right;
   font-family: "Quicksand", sans-serif;
   font-size: 0.95rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .tags-row {
@@ -695,7 +750,7 @@ div.yarn-tile .line-name {
 
 .info-list li, .credit-line {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.6rem;
 }
 
@@ -706,7 +761,7 @@ div.yarn-tile .line-name {
   background-color: var(--primary);
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   .layout {
     display: flex;
     flex-direction: column;
@@ -729,8 +784,10 @@ div.yarn-tile .line-name {
     padding: 0.5rem;
   }
 
-  .lightbox-content img {
-    max-width: 68vw;
+  /* Full width, like the gallery's mobile image, rather than leaving a lot
+     of unused dark backdrop on either side. */
+  .lightbox-frame img {
+    max-width: 92vw;
   }
 
   .lightbox-nav {
@@ -743,14 +800,30 @@ div.yarn-tile .line-name {
     height: 18px;
   }
 
+  /* Unlike desktop/tablet, mobile doesn't have room to keep the buttons
+     outside the image — overlay them on the picture's own edges instead. */
   .lightbox-prev {
-    right: 100%;
-    margin-right: 8px;
+    right: auto;
+    left: 0.5rem;
+    margin-right: 0;
   }
 
   .lightbox-next {
-    left: 100%;
-    margin-left: 8px;
+    left: auto;
+    right: 0.5rem;
+    margin-left: 0;
+  }
+
+  .lightbox-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+  }
+
+  .lightbox-close svg {
+    width: 18px;
+    height: 18px;
   }
 
   .info-list, .designer-list, .socials-list {
@@ -758,10 +831,20 @@ div.yarn-tile .line-name {
   }
 }
 
+/* iPad (either orientation): the buttons stay outside the image here (unlike
+   mobile), but at the desktop image size (80vw) there's barely any margin
+   left over for them at these narrower widths — they end up touching the
+   screen edge. Shrinking the image leaves them real breathing room. */
+@media (--tablet-only) {
+  .lightbox-frame img {
+    max-width: 68vw;
+  }
+}
+
 /* iPad held upright: cards stay stacked (no room for a 300px side column),
    but there's enough width to fan the gallery/similar grids out further and
    to sit the pattern + "view on" cards side by side. */
-@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+@media (--tablet-only) and (orientation: portrait) {
   .layout {
     display: flex;
     flex-direction: column;

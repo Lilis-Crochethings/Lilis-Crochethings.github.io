@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AboutCard from '../components/main/AboutCard.astro';
 import CreationsCard from '../components/main/CreationsCard.astro';
+import GalleryCard from '../components/main/GalleryCard.astro';
 import PatternsCard from '../components/main/PatternsCard.astro';
 import { getCollection } from 'astro:content';
 
@@ -9,8 +10,20 @@ const allCreations = (await getCollection('creations')).sort(
   (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0)
 );
 
-const creationImages = allCreations.flatMap((creation) =>
-  creation.data.images.map((image) => ({ image, title: creation.data.title }))
+// TODO: revisit this card's design (currently just a static grid of covers,
+// same as PatternsCard) — capped at 4 for now so it doesn't grow unbounded
+// as more creations get added.
+const creationCovers = allCreations.slice(0, 4).map((creation) => ({
+  image: creation.data.images[0],
+  title: creation.data.title,
+}));
+
+// Capped at 2 images per creation for the marquee — showing every image of
+// every creation ballooned to 100+ <img> tags (doubled again for the
+// seamless-loop duplicate), which only gets worse as the collection grows.
+const MARQUEE_IMAGES_PER_CREATION = 2;
+const galleryImages = allCreations.flatMap((creation) =>
+  creation.data.images.slice(0, MARQUEE_IMAGES_PER_CREATION).map((image) => ({ image, title: creation.data.title }))
 );
 ---
 
@@ -27,10 +40,12 @@ const creationImages = allCreations.flatMap((creation) =>
     "If you like my stuff, you can give me a follow on my socials.",
     "However, currently the site is still work in progress...",
   ]}
-  image="/images/Lilis-Crochethings.webp"
+  image="/images/Lilis-Crochethings-thumb.webp"
 />
 
-<CreationsCard creations={creationImages} />
+<CreationsCard creations={creationCovers} />
+
+<GalleryCard creations={galleryImages} />
 
 <PatternsCard
   patterns={[

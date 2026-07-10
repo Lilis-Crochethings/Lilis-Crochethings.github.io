@@ -22,7 +22,11 @@ const imageURL = new URL("/images/Lilis-Crochethings.webp", Astro.site);
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -46,7 +50,7 @@ const imageURL = new URL("/images/Lilis-Crochethings.webp", Astro.site);
       <h1 class="brand">Lili's Crochethings</h1>
 
       <div class="avatar">
-        <img src="/images/Lilis-Crochethings.webp" alt="Lili's Crochethings" />
+        <img src="/images/Lilis-Crochethings-thumb.webp" alt="Lili's Crochethings" />
       </div>
 
       <h2 class="section-title">Socials</h2>
@@ -103,7 +107,7 @@ const imageURL = new URL("/images/Lilis-Crochethings.webp", Astro.site);
   .brand {
     font-size: 2rem;
     text-align: center;
-    color: var(--primary);
+    color: var(--primary-text);
     margin: 0 0 0.5rem;
   }
 
@@ -127,7 +131,7 @@ const imageURL = new URL("/images/Lilis-Crochethings.webp", Astro.site);
 
   .section-title {
     font-size: 1.5rem;
-    color: var(--primary);
+    color: var(--primary-text);
     margin: 1rem 0 0.25rem;
   }
 
@@ -140,7 +144,7 @@ const imageURL = new URL("/images/Lilis-Crochethings.webp", Astro.site);
 
   .link-pill {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: 0.75rem;
     width: 100%;
     box-sizing: border-box;

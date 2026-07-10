@@ -33,3 +33,6 @@ public/images/icons/*
 # personal data exports (time tracking, Instagram archive)
 scripts/clockify/
 scripts/instagram-export/
+
+# Lighthouse reports
+analysis/

@@ -28,6 +28,15 @@ jobs:
         with:
           path: dist
 
+      # Report-only: audits the actual built site (not the dev server) on
+      # every push and logs a shareable report link. Never fails the build —
+      # see .github/lighthouserc.json for the audited pages/settings.
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        continue-on-error: true
+        with:
+          configPath: ./.github/lighthouserc.json
+
   deploy:
     needs: build
     runs-on: ubuntu-latest

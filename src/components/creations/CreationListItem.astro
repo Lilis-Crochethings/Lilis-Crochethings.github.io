@@ -2,6 +2,7 @@
 import TagChip from "./TagChip.astro";
 import DifficultyChip from "./DifficultyChip.astro";
 import type { TagCategory } from "../../lib/tags";
+import { toThumb } from "../../lib/images";
 
 const { creation, effectiveTags = [], taxonomy } = Astro.props as {
   creation: any;
@@ -10,30 +11,175 @@ const { creation, effectiveTags = [], taxonomy } = Astro.props as {
 };
 
 const difficulty: string | undefined = creation.data.difficulty;
+const images: string[] = creation.data.images;
+const thumbs = images.map(toThumb);
+const hasMultiple = thumbs.length > 1;
+const imagesJson = JSON.stringify(thumbs).replace(/</g, "\\u003c");
 ---
 
-<a
-  class="list-item"
-  href={`/creations/${creation.id}`}
+<div
+  class="list-item-wrap"
   data-date={creation.data.date?.getTime() ?? 0}
   data-hours={creation.data.hoursSpent ?? 0}
   data-tags={effectiveTags.join(" ")}
   data-difficulty={difficulty}
+  data-images={imagesJson}
 >
-  <DifficultyChip difficulty={difficulty} hideOnMobile />
-  <div class="thumb">
-    <img src={creation.data.images[0]} alt={creation.data.title} loading="lazy" decoding="async" />
-  </div>
-  <div class="body">
-    <h3 class="title">{creation.data.title}</h3>
-    {creation.data.description && <p class="preview">{creation.data.description}</p>}
-    {effectiveTags.length > 0 && (
-      <div class="tags">
-        {effectiveTags.map((id) => (
-          <TagChip id={id} taxonomy={taxonomy} />
-        ))}
-      </div>
-    )}
-  </div>
-</a>
+  <a class="list-item" href={`/creations/${creation.id}`}>
+    <DifficultyChip difficulty={difficulty} hideOnMobile />
+    <div class="thumb">
+      <img class="thumb-img" src={thumbs[0]} alt={creation.data.title} loading="lazy" decoding="async" />
+    </div>
+    <div class="body">
+      <h2 class="title">{creation.data.title}</h2>
+      {creation.data.description && <p class="preview">{creation.data.description}</p>}
+      {effectiveTags.length > 0 && (
+        <div class="tags">
+          {effectiveTags.map((id) => (
+            <TagChip id={id} taxonomy={taxonomy} />
+          ))}
+        </div>
+      )}
+    </div>
+  </a>
 
+  {hasMultiple && (
+    <div class="thumb-nav-overlay">
+      <button type="button" class="tile-nav prev" aria-label="Previous image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <button type="button" class="tile-nav next" aria-label="Next image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  )}
+</div>
+
+<style>
+@import "../../styles/breakpoints.css";
+
+.list-item-wrap {
+  position: relative;
+}
+
+.thumb {
+  position: relative;
+}
+
+/* Sits over exactly where .thumb renders inside the anchor (same offset as
+   .list-item's own padding, same size as .thumb). Buttons can't live inside
+   .thumb itself: it's nested in the <a>, and interactive elements aren't
+   allowed to nest inside one.
+   pointer-events stays "none" by default so touch swipes pass straight
+   through to .thumb underneath. On devices with real hover it flips to
+   "auto" (below) so this becomes the one reliable target for "is the
+   pointer over the picture" — that's also why button visibility is keyed
+   off *this* element's :hover rather than .list-item-wrap's: hovering the
+   title/description/tags shouldn't reveal picture-flipping buttons. */
+.thumb-nav-overlay {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  width: 132px;
+  height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tile-nav {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: var(--cursor-pointer);
+  opacity: 0;
+  /* Off until revealed below — otherwise this still intercepts clicks
+     meant for the thumbnail/link underneath even while invisible. */
+  pointer-events: none;
+  transform: scale(0.7);
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
+}
+
+.tile-nav:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.tile-nav svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .thumb-nav-overlay {
+    /* Becomes the real hover/click target for the picture on devices where
+       hovering is meaningful — see the comment above. */
+    pointer-events: auto;
+  }
+
+  .thumb-nav-overlay:hover .tile-nav {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+  }
+
+  /* .list-item's own :hover (global.css) stops applying while the pointer
+     is over .thumb-nav-overlay, since that overlay — not the anchor — is
+     what's actually under the cursor there once it takes over pointer
+     events above. Re-declare the same enlarge here, keyed off the wrapper
+     instead, so it stays put while hovering the buttons/picture. */
+  .list-item-wrap:hover .list-item {
+    transform: scale(1.01);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.tile-nav:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+@media (--mobile) {
+  .thumb-nav-overlay {
+    width: 92px;
+    height: 92px;
+  }
+}
+</style>
+
+<script>
+  import { initTileCarousel } from "../../lib/tileCarousel";
+
+  document.querySelectorAll<HTMLElement>(".list-item-wrap[data-images]").forEach((root) => {
+    const viewport = root.querySelector<HTMLElement>(".thumb");
+    const img = root.querySelector<HTMLImageElement>(".thumb-img");
+    const link = root.querySelector<HTMLAnchorElement>(".list-item");
+    const overlay = root.querySelector<HTMLElement>(".thumb-nav-overlay");
+    const prevBtn = root.querySelector<HTMLButtonElement>(".tile-nav.prev");
+    const nextBtn = root.querySelector<HTMLButtonElement>(".tile-nav.next");
+    if (!viewport || !img) return;
+
+    initTileCarousel({ root, viewport, img, swipeTarget: viewport, link, prevBtn, nextBtn });
+
+    // The overlay takes over pointer events on hover-capable devices (see
+    // the stylesheet) so it's a reliable hover target for the buttons —
+    // but that means clicks landing in the gaps between them (still over
+    // the picture) would otherwise hit the overlay's own empty div instead
+    // of following the link underneath.
+    overlay?.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest(".tile-nav")) return;
+      link?.click();
+    });
+  });
+</script>

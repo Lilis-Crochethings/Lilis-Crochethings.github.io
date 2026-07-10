@@ -1,0 +1,43 @@
+---
+import { toThumb } from "../../lib/images";
+
+const { image, alt, index } = Astro.props as {
+  image: string;
+  alt: string;
+  index: number;
+};
+---
+
+<button type="button" class="tile" data-gallery-index={index} aria-label={`View ${alt}`}>
+  <img src={toThumb(image)} alt={alt} loading="lazy" decoding="async" />
+</button>
+
+<style>
+.tile {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: var(--cursor-pointer);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tile img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.tile:hover {
+  transform: scale(1.04);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+}
+</style>

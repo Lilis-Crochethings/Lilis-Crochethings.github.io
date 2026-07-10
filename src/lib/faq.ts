@@ -1,12 +1,7 @@
-import { parse } from "yaml";
-import faqRaw from "../data/faq.yaml?raw";
 import { escapeHtml, highlight } from "./search";
 
 export type FaqQuestion = { question: string; answer: string };
 export type FaqCategory = { id: string; title: string; questions: FaqQuestion[] };
-type FaqConfig = { categories: FaqCategory[] };
-
-export const faqCategories: FaqCategory[] = (parse(faqRaw) as FaqConfig).categories;
 
 export function getFaqQuestionId(categoryId: string, index: number): string {
   return `faq-q-${categoryId}-${index}`;
@@ -19,21 +14,6 @@ export type FaqDoc = {
   question: string;
   answer: string;
 };
-
-export function getFaqDocs(): FaqDoc[] {
-  return faqCategories.flatMap((category) =>
-    category.questions.map((q, index) => {
-      const id = getFaqQuestionId(category.id, index);
-      return {
-        id,
-        href: `/faq#${id}`,
-        category: category.title,
-        question: q.question,
-        answer: q.answer,
-      };
-    })
-  );
-}
 
 // Supports inline links in FAQ answers using markdown-style `[text](url)` syntax.
 // Pass `query` to also wrap case-insensitive matches in <mark> (both in link text and plain text).

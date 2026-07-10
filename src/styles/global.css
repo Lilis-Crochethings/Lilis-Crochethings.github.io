@@ -1,4 +1,5 @@
 /* src/styles/global.css */
+@import "./breakpoints.css";
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -7,45 +8,11 @@
 
 
 @font-face {
-  font-family: "Lili Bold";
-  src: url("/fonts/Lili Bold-Regular.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Lili Curly";
-  src: url("/fonts/Lili Curly-Regular.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Lili Jolly";
-  src: url("/fonts/Lili Jolly-Regular.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Lili Lovely";
-  src: url("/fonts/Lili Lovely-Regular.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Lili Simple";
-  src: url("/fonts/Lili Simple-Regular.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
   font-family: "Lili Love";
-  src: url("/fonts/Lili Love-Regular.otf") format("truetype");
+  src: url("/fonts/Lili Love-Regular.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -53,6 +20,7 @@
   src: url("/fonts/Lili Love-Bold.otf") format("truetype");
   font-weight: bold;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -60,20 +28,30 @@
   src: url("/fonts/Quicksand-Variable.ttf") format("truetype-variations");
   font-weight: 300 700;
   font-style: normal;
+  font-display: swap;
 }
 
 :root {
   --primary: #B7718D;
+  /* Darker variant of --primary for text/links on white or --background —
+     #B7718D only hits ~3.65:1 contrast there, short of WCAG AA's 4.5:1 for
+     normal text. Use --primary for backgrounds/borders/icons (already ≥3:1,
+     the non-text threshold); use --primary-text for anything readable. */
+  --primary-text: #9d486a;
   --background: #fffaf7;
   --text: #2b2b2b;
   --accent: #F0C7D7;
-  /* --cursor-pointer: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='27' viewBox='0 0 114.70667 135.36435'><rect x='33' y='0' width='31' height='66' rx='15' fill='white'/><rect x='2' y='28' width='110' height='106' rx='20' fill='white'/><g transform='translate(-47.64666,-30.741325)'><path fill='%23B7718D' d='m 116.27014,165.73683 c -6.90574,-0.94198 -13.89482,-3.88412 -19.335046,-8.13932 -1.21996,-0.95422 -12.27915,-11.90169 -25.07957,-24.82622 -18.184319,-18.36063 -23.027264,-23.39161 -23.528699,-24.44222 -0.93559,-1.96028 -0.903607,-4.53807 0.08128,-6.5511 1.238126,-2.530644 4.403399,-4.937934 8.304184,-6.315594 2.168654,-0.76592 6.499044,-0.95304 8.909804,-0.385 2.291731,0.53999 4.776081,1.71565 6.425911,3.04091 0.70047,0.56267 2.94046,2.589244 4.97775,4.503494 l 3.70416,3.48045 0.1323,-32.753244 0.13229,-32.753252 0.63289,-1.5875 c 1.82525,-4.578352 5.11949,-7.318758 9.75301,-8.11332 4.95137,-0.849065 10.353376,1.895224 12.649296,6.425993 1.38413,2.731461 1.43875,3.360127 1.43875,16.559581 0,6.73614 0.0452,12.24754 0.10032,12.24754 0.0552,0 0.73979,-0.29214 1.52136,-0.6492 2.07901,-0.94979 4.80604,-1.33895 6.85437,-0.97814 3.44293,0.60646 7.05655,3.04984 8.6621,5.85696 0.37571,0.656878 0.70719,1.229678 0.73663,1.272888 0.0294,0.0432 0.81192,-0.33438 1.73885,-0.839078 2.18361,-1.18894 3.61158,-1.55155 6.05096,-1.53651 5.01314,0.0309 9.35946,2.976888 11.24827,7.624188 0.32367,0.79638 0.63389,1.45921 0.68938,1.47296 0.0555,0.0138 0.57714,-0.21759 1.15922,-0.5141 3.92957,-2.00168 8.74686,-1.82119 12.30329,0.46097 2.83219,1.8174 4.99582,5.12691 5.53848,8.47169 0.37201,2.29296 0.37703,37.751074 0.006,41.666744 -0.91577,9.66184 -4.74475,18.17157 -11.23308,24.96501 -9.14332,9.57328 -21.77638,14.08013 -34.57435,12.33442 z m 11.48015,-5.80826 c 12.47163,-2.17487 23.38963,-11.89525 27.19858,-24.21513 1.57433,-5.09206 1.58441,-5.26982 1.58158,-27.88205 l -0.003,-20.668994 -0.6254,-1.32292 c -1.91054,-4.04132 -6.79508,-5.08963 -10.11177,-2.17016 -2.14798,1.89073 -2.32165,2.48222 -2.48031,8.44728 -0.12751,4.79427 -0.18263,5.26256 -0.67757,5.75694 -1.27504,1.27359 -3.4874,1.10308 -4.36511,-0.33642 -0.48386,-0.79356 -0.51827,-1.37437 -0.52057,-8.78722 -0.001,-4.58253 -0.11668,-8.34874 -0.2727,-8.91045 -0.78279,-2.81839 -3.46504,-4.98164 -6.17317,-4.9787 -2.2093,0.002 -3.29298,0.44213 -4.78227,1.94052 -1.8669,1.87831 -2.00054,2.48025 -2.00054,9.01126 0,5.8753 -0.16965,6.83585 -1.35384,7.66529 -0.79017,0.55346 -2.32298,0.55346 -3.11315,0 -1.25282,-0.87755 -1.35378,-1.62675 -1.35378,-10.04654 0,-5.25085 -0.103,-8.19294 -0.31115,-8.88769 -0.40702,-1.35851 -2.16893,-3.33833 -3.51507,-3.949798 -1.50899,-0.68545 -4.04329,-0.65605 -5.5766,0.0647 -0.65724,0.308938 -1.61113,1.047878 -2.11975,1.642088 -1.48859,1.73909 -1.7066,2.93729 -1.7066,9.38006 v 5.66698 l -0.89958,0.89958 c -0.97536,0.97536 -1.95702,1.15387 -3.20885,0.58349 -1.497406,-0.68227 -1.447816,0.14325 -1.447816,-24.096698 0,-25.464944 0.101466,-24.194271 -2.10838,-26.40412 -1.5286,-1.528602 -3.50722,-2.242302 -5.42086,-1.955334 -1.78821,0.268158 -3.81677,1.605955 -4.76438,3.142019 l -0.80325,1.302059 -0.13229,36.447884 -0.13229,36.447904 -0.55452,0.74692 c -0.60621,0.81654 -2.04384,1.31511 -3.0472,1.05675 -0.34739,-0.0894 -3.72724,-3.08329 -7.51078,-6.65299 -7.49631,-7.07261 -8.59514,-7.85152 -11.867045,-8.41197 -3.212505,-0.550284 -6.909043,0.53796 -9.186512,2.70447 -0.840827,0.79986 -1.039152,1.17385 -1.039152,1.95957 0,0.93276 0.902772,1.88266 22.888159,24.08297 24.645316,24.88625 24.961276,25.17626 30.160796,27.68442 4.14306,1.99854 7.40695,2.91768 12.5677,3.53917 1.55308,0.18703 6.4624,-0.0896 8.78809,-0.49513 z'/></g></svg>") 7 1, pointer; */
+  /* Shared page content width, so every page's <main> — and every
+     two-column page's sidebar — renders at the same width instead of each
+     page hardcoding its own close-but-not-quite value. */
+  --page-width: 1046px;
+  --sidebar-width: 300px;
+  --cursor-pointer: pointer;
 }
 
 html {
   scrollbar-color: var(--primary) var(--background);
   scrollbar-width: auto;
-  /* cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='28' viewBox='0 0 24 28'><path d='M2 2 L2 19 L6.5 15 L9.5 22.5 L12.5 21 L9 14 L16 14 Z' fill='white' stroke='%23B7718D' stroke-width='1' stroke-linejoin='round'/></svg>") 2 2, auto; */
 }
 
 
@@ -104,7 +82,7 @@ body {
   flex-direction: column;
 }
 
-@media (max-width: 1024px) {
+@media (--tablet-max) {
   html, body {
     overflow-x: hidden;
     max-width: 100vw;
@@ -116,9 +94,8 @@ body.nav-open {
 }
 
 a {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: none;
-  /* cursor: var(--cursor-pointer); */
 }
 
 h1, h2, h3 {
@@ -130,7 +107,7 @@ h1, h2, h3 {
   main {
     width: 100%;
     padding: 1rem 1rem 6rem;
-    max-width: 1046px;
+    max-width: var(--page-width);
     align-self: center;
   }
 
@@ -139,7 +116,9 @@ h1, h2, h3 {
   padding: 0.3rem 0.9rem;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--primary);
+  /* Darker than --primary: at this size/weight, --primary on --accent only
+     hits 2.4:1 contrast (WCAG AA needs 4.5:1 for text this small). */
+  color: #7a4459;
   font-family: "Quicksand", sans-serif;
   font-weight: bold;
   font-size: 0.85rem;
@@ -226,7 +205,7 @@ mark {
   margin-top: 0.2rem;
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   .list-item .thumb {
     width: 92px;
     height: 92px;
@@ -243,6 +222,10 @@ mark {
 
   .list-item .title {
     font-size: 1.15rem;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -255,7 +238,7 @@ mark {
   display: inline-block;
   background: none;
   border: 1px solid var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   font-family: "Quicksand", sans-serif;
   font-weight: bold;
   font-size: 0.75rem;
@@ -309,7 +292,7 @@ mark {
   color: #cb8184;
 }
 
-@media (max-width: 767px) {
+@media (--mobile) {
   .difficulty-chip.hide-on-mobile {
     display: none;
   }
@@ -344,7 +327,7 @@ mark {
   font-family: "Quicksand", sans-serif;
   font-size: 1.05rem;
   font-weight: bold;
-  color: var(--primary);
+  color: var(--primary-text);
   margin: 0;
 }
 
@@ -356,7 +339,7 @@ mark {
 }
 
 .faq-result-answer a {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -368,7 +351,7 @@ mark {
   font-family: "Lili Love", cursive;
   font-size: 1.3rem;
   font-weight: bold;
-  color: var(--primary);
+  color: var(--primary-text);
   margin: 0.4rem 0 0;
   padding-left: 0.3rem;
 }

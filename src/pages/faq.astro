@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { faqCategories, getFaqQuestionId, renderFaqAnswer } from '../lib/faq';
+import { getFaqQuestionId, renderFaqAnswer } from '../lib/faq';
+import { faqCategories } from '../lib/faq-data';
 ---
 
 <BaseLayout
@@ -155,7 +156,7 @@ import { faqCategories, getFaqQuestionId, renderFaqAnswer } from '../lib/faq';
   font-family: "Quicksand", sans-serif;
   font-size: 1.05rem;
   font-weight: bold;
-  color: var(--primary);
+  color: var(--primary-text);
   cursor: var(--cursor-pointer);
   list-style: none;
   display: flex;
@@ -189,7 +190,7 @@ import { faqCategories, getFaqQuestionId, renderFaqAnswer } from '../lib/faq';
 }
 
 .faq-item p :global(a) {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

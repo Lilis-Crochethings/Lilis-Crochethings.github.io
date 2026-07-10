@@ -52,6 +52,7 @@ async function main() {
   let converted = 0;
   let skipped = 0;
   let copied = 0;
+  const failed = [];
 
   for (const srcPath of files) {
     const ext = extname(srcPath).toLowerCase();
@@ -71,27 +72,37 @@ async function main() {
       continue;
     }
 
-    await mkdir(dirname(destPath), { recursive: true });
+    try {
+      await mkdir(dirname(destPath), { recursive: true });
 
-    if (isWebp) {
-      await copyFile(srcPath, destPath);
-      copied++;
-      console.log(`Copied:    ${relPath} -> ${relative(rootDir, destPath)}`);
-    } else {
-      // .rotate() with no args bakes in the EXIF Orientation tag (common on
-      // phone photos) as an actual pixel rotation before encoding — webp
-      // doesn't reliably preserve/honor that tag otherwise.
-      await sharp(srcPath)
-        .rotate()
-        .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: WEBP_QUALITY })
-        .toFile(destPath);
-      converted++;
-      console.log(`Converted: ${relPath} -> ${relative(rootDir, destPath)}`);
+      if (isWebp) {
+        await copyFile(srcPath, destPath);
+        copied++;
+        console.log(`Copied:    ${relPath} -> ${relative(rootDir, destPath)}`);
+      } else {
+        // .rotate() with no args bakes in the EXIF Orientation tag (common on
+        // phone photos) as an actual pixel rotation before encoding — webp
+        // doesn't reliably preserve/honor that tag otherwise.
+        await sharp(srcPath)
+          .rotate()
+          .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+          .webp({ quality: WEBP_QUALITY })
+          .toFile(destPath);
+        converted++;
+        console.log(`Converted: ${relPath} -> ${relative(rootDir, destPath)}`);
+      }
+    } catch (err) {
+      // One unreadable/corrupt source file shouldn't block every other file
+      // in the batch — report it and keep going.
+      failed.push(relPath);
+      console.error(`Failed:    ${relPath} (${err.message.split("\n")[0]})`);
     }
   }
 
-  console.log(`\nDone. ${converted} converted, ${copied} copied, ${skipped} already up to date.`);
+  console.log(`\nDone. ${converted} converted, ${copied} copied, ${skipped} already up to date, ${failed.length} failed.`);
+  if (failed.length > 0) {
+    console.log(`Failed files:\n${failed.map((f) => `  - ${f}`).join("\n")}`);
+  }
 }
 
 main();

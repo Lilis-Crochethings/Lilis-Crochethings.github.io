@@ -1,10 +1,10 @@
 ---
 import { getCollection } from "astro:content";
 
-const general = (await getCollection("general"))[0]; // TODO: improve, this is ugly
-console.log(general);
+const general = (await getCollection("general"))[0];
 
 const navItems = [
+  { href: "/gallery", label: "Gallery" },
   { href: "/creations", label: "Creations" },
   { href: "/patterns", label: "Patterns" },
   { href: "/about", label: "About me" },
@@ -17,7 +17,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 <nav class="nav">
   <div class="nav-inner">
     <a class="logo" href="/">
-      <img src="/images/Lilis-Crochethings.webp" alt="Profile pic" />
+      <img src="/images/Lilis-Crochethings-thumb.webp" alt="Profile pic" />
       <p>{general.data.name}</p>
     </a>
 
@@ -46,6 +46,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         placeholder="Search"
         autocomplete="off"
         aria-label="Search"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-autocomplete="list"
         aria-controls="search-results"
         aria-expanded="false"
       />
@@ -73,8 +76,14 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     document.body.classList.toggle("nav-open", !!isOpen);
   });
 
-  links?.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", closeMenu);
+  // Deliberately not closed on click: these links navigate to a whole new
+  // page, which discards this document anyway. Closing the overlay first
+  // would just reveal this (still-loading-away) page underneath for the
+  // gap before the browser finishes swapping in the new one. Instead reset
+  // it only when this page is restored from bfcache (e.g. hitting "back"),
+  // so a stale "open" state doesn't linger.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) closeMenu();
   });
 
   // Exposes the navbar's real height so the mobile search dropdown (which is
@@ -104,7 +113,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
   // On tablet/mobile the search box collapses to just this icon; clicking it
   // expands the real input to fill the available space (see the ≤1024px /
-  // ≤767px rules in <style>). No-op on desktop, where it's always expanded.
+  // --mobile rules in <style>). No-op on desktop, where it's always expanded.
   function expandSearch() {
     navSearch?.classList.add("expanded");
     // preventScroll: the collapsed input is a valid focus target even before
@@ -240,6 +249,8 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 </script>
 
 <style>
+  @import "../styles/breakpoints.css";
+
   .nav {
     position: relative;
     z-index: 20;
@@ -259,10 +270,10 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     font-family: "Lili Love", cursive;
     font-weight: bold;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: 0.5rem;
     text-decoration: none;
-    color: #9d486a;
+    color: var(--primary-text);
   }
 
   .logo p {
@@ -290,7 +301,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     font-weight: normal;
     font-size: 1.1rem;
     text-decoration: none;
-    color: #9d486a;
+    color: var(--primary-text);
   }
 
   .nav-links a.active {
@@ -454,7 +465,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     display: none;
     font-size: 1.8rem;
     line-height: 1;
-    color: var(--primary);
+    color: var(--primary-text);
   }
 
   .hamburger.open .icon-menu {
@@ -467,7 +478,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
   /* Tablet/iPad: drop the wordmark, collapse search to an icon that expands
      on click (nav items still shown as text; no hamburger yet). */
-  @media (max-width: 1024px) {
+  @media (--nav-collapse) {
     .logo p {
       display: none;
     }
@@ -520,7 +531,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
   }
 
   /* Mobile */
-  @media (max-width: 767px) {
+  @media (--mobile) {
     .nav-inner {
       flex-wrap: nowrap;
       gap: 0.75rem;
@@ -545,8 +556,24 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
       margin-left: auto;
     }
 
+    /* Undo the tablet rule's position:absolute + transform: a transformed
+       ancestor becomes the containing block for position:fixed descendants,
+       which was quietly capping .search-results (fixed, meant to be
+       viewport-wide) to this box's own narrow width instead. The hamburger
+       is hidden while expanded (see above), so there's no sibling left to
+       fight for space — back to a plain in-flow flex-grow box.
+       Must stay `relative`, not `static`: the search icon, close button,
+       and results dropdown are all position:absolute against this element,
+       and static would push them up to look for the next positioned
+       ancestor (.nav) instead, throwing them off in the wrong place. */
     .nav-search.expanded {
+      position: relative;
+      top: auto;
+      right: auto;
+      transform: none;
+      margin-left: 0;
       max-width: none;
+      width: auto;
       flex: 1 1 auto;
     }
 

@@ -10,7 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "images:convert": "node scripts/convert-images.mjs"
+    "images:convert": "node scripts/convert-images.mjs",
+    "images:thumbnails": "node scripts/generate-thumbnails.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
@@ -20,6 +21,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@types/node": "^26.1.0",
+    "postcss-custom-media": "^12.0.1",
+    "postcss-import": "^16.1.1",
     "sharp": "^0.35.3",
     "typescript": "^6.0.3"
   }

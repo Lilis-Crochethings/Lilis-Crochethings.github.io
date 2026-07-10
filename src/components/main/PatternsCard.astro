@@ -1,5 +1,6 @@
 ---
 // src/components/cards/PatternsCard.astro
+import { toThumb } from "../../lib/images";
 const { patterns } = Astro.props;
 ---
 
@@ -9,7 +10,7 @@ const { patterns } = Astro.props;
   <div class="grid">
     {patterns.map((p: any) => (
       <div class="imgWrap">
-        <img src={p.image} alt={p.title} loading="lazy" decoding="async" />
+        <img src={toThumb(p.image)} alt={p.title} loading="lazy" decoding="async" />
       </div>
     ))}
   </div>
