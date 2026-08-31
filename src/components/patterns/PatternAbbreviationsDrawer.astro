@@ -18,7 +18,34 @@
 // with its own slide-in/out (the script animates the transform itself,
 // since a native dialog's open/close is otherwise an instant, unanimated
 // display swap).
-const { abbreviations } = Astro.props as { abbreviations: { id: string; label: string }[] };
+import StitchInfo from "./StitchInfo.astro";
+
+const { abbreviations, symbols = [], label } = Astro.props as {
+  // Both halves come from the one stitch catalog (stitches.yaml), which is
+  // why they share a shape — see patterns/[slug].astro for how each list is
+  // resolved.
+  abbreviations: { id: string; label: string; info?: string }[];
+  // A chart pattern's key is symbols first, abbreviations under them — the
+  // same two sections, under the same two headings, as the on-page card this
+  // drawer stands in for (patterns/[slug].astro), so a visitor who opens it
+  // mid-pattern finds the list exactly where they left it.
+  symbols?: { id: string; label: string; image?: string; size?: number; info?: string }[];
+  // Names the nub and the dialog as a whole. Not a heading — the sections
+  // below have their own — but a 44px button and a modal both need a single
+  // phrase covering everything inside.
+  label: string;
+};
+
+const entryCount = abbreviations.length + symbols.length;
+
+// Same shared-width symbol column as the on-page card — see .symbol-key in
+// patterns/[slug].astro for why it's the widest listed symbol rather than a
+// fixed number.
+const symbolColumn = Math.max(...symbols.map((symbol) => symbol.size ?? 26), 0);
+
+// The nub is 44px wide, so its label has to be about two characters — enough
+// to say which of the three shapes this drawer currently has.
+const flapLabel = symbols.length > 0 ? (abbreviations.length > 0 ? "Key" : "Sy") : "Ab";
 
 // Same reasoning as [slug].astro's own capitalize() — glossary entries are
 // written lowercase in the yaml (natural to type), capitalized at render
@@ -28,7 +55,7 @@ function capitalize(text: string): string {
 }
 ---
 
-{abbreviations.length > 0 && (
+{entryCount > 0 && (
   <>
     <button
       type="button"
@@ -37,9 +64,9 @@ function capitalize(text: string): string {
       aria-haspopup="dialog"
       aria-controls="pattern-abbr-dialog"
       aria-expanded="false"
-      title="Abbreviations"
+      title={label}
     >
-      Ab
+      {flapLabel}
     </button>
 
     <dialog class="abbr-dialog" id="pattern-abbr-dialog" aria-labelledby="pattern-abbr-dialog-title">
@@ -51,20 +78,52 @@ function capitalize(text: string): string {
          drawer's open. Decorative only (the real close controls are the X
          button, backdrop click, and Escape below) — aria-hidden so it isn't
          announced as a second, non-functional control. */}
-      <span class="abbr-dialog-tab" aria-hidden="true">Ab</span>
+      <span class="abbr-dialog-tab" aria-hidden="true">{flapLabel}</span>
       <div class="abbr-dialog-content">
         <button type="button" class="abbr-close" id="pattern-abbr-close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
-        <h2 id="pattern-abbr-dialog-title">Abbreviations</h2>
-        <dl class="abbr-table">
-          {abbreviations.map((abbr) => (
-            <>
-              <dt class="abbr-key">{abbr.id.toUpperCase()}:</dt>
-              <dd class="abbr-meaning">{capitalize(abbr.label)}</dd>
-            </>
-          ))}
-        </dl>
+        {/* The dialog is labelled by whichever section comes first, so its
+            accessible name is a real heading rather than a second copy of
+            one — hence the id landing on Symbols only when Symbols exists. */}
+        {symbols.length > 0 && (
+          <>
+            <h2 id="pattern-abbr-dialog-title">Symbols</h2>
+            <dl class="abbr-table symbol-table" style={`--symbol-column:${symbolColumn}px`}>
+              {symbols.map((symbol) => (
+                <>
+                  <dt class="abbr-key symbol-key">
+                    <span
+                      class="symbol-icon mask-icon"
+                      style={`--symbol-size:${symbol.size ?? 26}px; mask-image:url(${symbol.image}); -webkit-mask-image:url(${symbol.image});`}
+                      aria-hidden="true"
+                    ></span>
+                  </dt>
+                  <dd class="abbr-meaning">
+                    {capitalize(symbol.label)}
+                    {symbol.info && <StitchInfo text={symbol.info} id={`stitch-drawer-symbol-${symbol.id}`} />}
+                  </dd>
+                </>
+              ))}
+            </dl>
+          </>
+        )}
+        {abbreviations.length > 0 && (
+          <>
+            <h2 id={symbols.length > 0 ? undefined : "pattern-abbr-dialog-title"}>Abbreviations</h2>
+            <dl class="abbr-table">
+              {abbreviations.map((abbr) => (
+                <>
+                  <dt class="abbr-key">{abbr.id.toUpperCase()}:</dt>
+                  <dd class="abbr-meaning">
+                    {capitalize(abbr.label)}
+                    {abbr.info && <StitchInfo text={abbr.info} id={`stitch-drawer-abbr-${abbr.id}`} />}
+                  </dd>
+                </>
+              ))}
+            </dl>
+          </>
+        )}
       </div>
     </dialog>
   </>
@@ -230,5 +289,30 @@ function capitalize(text: string): string {
 .abbr-meaning {
   margin: 0;
   color: var(--text);
+}
+
+/* Mirrors the on-page card's own two-section key (patterns/[slug].astro) —
+   duplicated for the same reason .abbr-table above is: the card and this
+   drawer never render into the same DOM subtree at once. */
+.abbr-dialog-content h2 ~ h2 {
+  margin-top: 1.5rem;
+}
+
+.symbol-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--symbol-column, 26px);
+}
+
+.symbol-table .abbr-meaning {
+  align-self: center;
+}
+
+.symbol-icon {
+  display: block;
+  width: var(--symbol-size, 26px);
+  height: var(--symbol-size, 26px);
+  background-color: var(--primary);
 }
 </style>

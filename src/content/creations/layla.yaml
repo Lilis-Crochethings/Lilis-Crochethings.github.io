@@ -11,7 +11,8 @@ searchTerms:
   - "Aisha"
   - "Fairy of Waves"
 date: 2026-06-24
-# instagramLink: ""
+instagramLink: "https://www.instagram.com/p/Dctyyu-jQ1g/"
+facebookLink: "https://www.facebook.com/permalink.php?story_fbid=pfbid0QSQKC7WrwJXqVBRqt9spzeJr464YyLpLhYX7YWG3bkX5gtDLZcuuYK8sLQeaC9Zbl&id=61568543484297"
 hoursSpent: 9
 # hookSize: ""
 yarn:
@@ -44,7 +45,6 @@ subtypes:
   - cross-stitch
 colors:
   - green
-  - purple
   - brown
 yarnTypes:
   - floss

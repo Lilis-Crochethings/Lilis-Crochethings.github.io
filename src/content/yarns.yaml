@@ -1365,6 +1365,18 @@ yarns:
       - number: "741"
         name: "Orange"
         hex: "#f0862a"
+      # Added for Tecna. Hexes are eyeballed from the hand-drawn swatch chart
+      # rather than sampled off the floss, so nudge them against the real
+      # skeins if a swatch reads wrong.
+      - number: "209"
+        name: "Light Purple"
+        hex: "#b482d6"
+      - number: "3746"
+        name: "Blue Violet"
+        hex: "#7b74d4"
+      - number: "3805"
+        name: "Pink"
+        hex: "#e34795"
   - name: "Dolce"
     type: "Chenille"
     colors:
@@ -1374,6 +1386,11 @@ yarns:
       - name: "Indigo"
         hex: "#363685"
         link: "https://www.veritas.be/nl_be/dolce-456372000028-i60"
+      # Veritas calls this one "Donkerblauw" (I41); named in English here to
+      # match the rest of the line. Hex is eyeballed from the product photo.
+      - name: "Dark Blue"
+        hex: "#1e2a57"
+        link: "https://www.veritas.be/nl_be/dolce-456372000028-i41"
       - name: "Yellow"
         hex: "#FBF4E1"
         link: "https://www.veritas.be/nl_be/dolce-456372000028-c10"
@@ -1410,3 +1427,15 @@ yarns:
     colors:
       - name: "Mixed fibers"
         hex: "#434643"
+  - name: "Sultan Shadow"
+    type: "Cotton"
+    link: "https://hobbii.be/products/hp-1004695-sultan-shadow"
+    colors:
+      # Gradient cake that fades from blue into black. Hex sampled off the
+      # skein rather than taken from the product photo, since a single swatch
+      # colour can only ever be one point along the gradient.
+      - number: "104"
+        name: "Black / blue"
+        image: "/images/yarns/sultan-shadow/black-blue.webp"
+        link: "https://hobbii.be/products/hp-1004695-sultan-shadow?variant=55424059900280"
+        hex: "#3549B2"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Magic ring: a plain open circle, the loop every round-worked piece
+     starts from. Solid black on transparent like every other entry in this
+     folder — these are rendered as CSS masks, so only the shape matters. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#000000" stroke-width="18" />
+</svg>

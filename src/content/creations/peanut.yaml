@@ -1,0 +1,43 @@
+title: "Peanut 🐢"
+difficulty: medium
+images:
+  - "/images/creations/Peanut-1.webp"
+  - "/images/creations/Peanut-2.webp"
+  - "/images/creations/Peanut-3.webp"
+description: |-
+  Little Peanut joins the family 🧡💙. Another crochet sea turtle, worked from the same pattern as my [first one](/creations/turtle). He also has a tag with his name on it. Even though when I took the pictures, the writing had already faded 😅.
+searchTerms:
+  - "Plushie"
+  - "Sea turtle"
+  - "Tortoise"
+date: 2024-10-31
+uploadDate: 2026-08-31
+instagramLink: "https://www.instagram.com/p/DByMDONN99C/"
+facebookLink: "https://www.facebook.com/permalink.php?story_fbid=pfbid02Y5gff3oi5bZnngtbjroV1yuwdQg6Md8ca63PrZXvUsE2z4gKkxJBAT1QZnGXnc1fl&id=61568543484297"
+pinterestLink: "https://www.pinterest.com/pin/1095219203165132649/"
+# hoursSpent: 0
+hookSize: "4mm"
+yarn:
+  - "Dolce - Petrol Green"
+  - "Dolce - Rust"
+patterns:
+  - creator: "Rose & Lily Amigurumi"
+    creatorLink: "https://www.roseandlilyamigurumi.com/"
+    items:
+      - name: "Easy Crochet Turtle - Part 1"
+        link: "https://www.youtube.com/watch?v=o_rsQnKVCEw"
+        platform: youtube
+      - name: "Easy Crochet Turtle - Part 2"
+        link: "https://www.youtube.com/watch?v=Rzn57LxPYgE"
+        platform: youtube
+type: crochet
+subtypes:
+  - amigurumi
+colors:
+  - blue
+  - brown
+  - orange
+yarnTypes:
+  - chenille
+tags:
+  - turtle

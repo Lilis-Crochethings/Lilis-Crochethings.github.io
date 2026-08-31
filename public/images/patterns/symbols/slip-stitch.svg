@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Slip stitch: a filled dot. Drawn edge to edge in the canvas like the
+     other symbols, and scaled down to read as the small dot it should be by
+     its `size` in symbols.yaml, rather than by drawing it small here — that
+     keeps one knob (size) in charge of how big every symbol renders. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="88" fill="#000000" />
+</svg>

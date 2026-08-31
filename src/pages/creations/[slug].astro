@@ -13,6 +13,7 @@ import { resolveYarn } from "../../lib/yarn";
 import { getEffectiveTags, getCreationAlt, getTagLabel } from "../../lib/tags";
 import { formatHours } from "../../lib/time";
 import { seededShuffle } from "../../lib/seededShuffle";
+import { socialImage } from "../../lib/images";
 
 export async function getStaticPaths() {
   const SIMILAR_LIMIT = 4;
@@ -227,7 +228,7 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
 <BaseLayout
   title={pageTitle}
   description={pageDescription}
-  image={data.images[0]}
+  image={socialImage(data.images)}
 >
   <script type="application/ld+json" is:inline set:html={JSON.stringify(creativeWorkSchema)} />
   <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbSchema)} />

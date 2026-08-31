@@ -1,12 +1,14 @@
 ---
 import { getCollection, type CollectionEntry } from "astro:content";
-import { buildRenderRows, resolveInfoText } from "../../lib/patternInstructions";
+import { buildRenderRows, buildChartRows, resolveInfoText } from "../../lib/patternInstructions";
+import { loadPatternChart, chartStepStyle, type LoadedChart } from "../../lib/patternChart";
 import { resolveYarn } from "../../lib/yarn";
 import ColoredSegments from "./ColoredSegments.astro";
 import PatternSettingsCard from "./PatternSettingsCard.astro";
 
 const { pattern } = Astro.props as { pattern: CollectionEntry<"patterns"> };
 const parts = pattern.data.pattern ?? [];
+const charts = pattern.data.charts ?? [];
 const yarns = pattern.data.materials?.yarns ?? [];
 const previewBase = pattern.data.materials?.colorPreviewBase;
 
@@ -24,6 +26,60 @@ const previewHexByYarnId = Object.fromEntries(
     .map((yarn) => [yarn.id, yarn.yarn ? resolveYarn(yarn.yarn, yarnLines)?.hex : undefined] as const)
     .filter((entry): entry is [string, string] => Boolean(entry[1]))
 );
+
+// The Pattern section is one flat list of cards no matter what a pattern is
+// made of. A chart card (its steps, each with its own copy of the drawing)
+// and a written part card (rounds/rows, repeat blocks, notes) differ only in
+// whether a chart hangs off them, so both are normalized to the same shape
+// here and rendered by a single template below — which is also what lets a
+// chart's steps reuse the written pattern's whole check-off, cascade,
+// progress and confetti behaviour untouched, rather than growing a parallel
+// copy of it.
+//
+// Charts come first: on a chart pattern they *are* the pattern, and any
+// written part alongside them is the finishing/assembly that comes after.
+type Section = {
+  /** Card heading — omitted for a single unnamed chart, which needs none. */
+  heading?: string;
+  /** Always set; used for image alt text, where "" would be useless. */
+  label: string;
+  info?: string;
+  images?: string[];
+  rows: ReturnType<typeof buildRenderRows>;
+  /** The drawing this card's steps are read off, or null for a written part. */
+  chart: (LoadedChart & { preview: boolean }) | null;
+};
+
+const chartSections: Section[] = charts.map((chart, chartIndex) => ({
+  heading: chart.name,
+  label: chart.name ?? `${pattern.data.title} chart`,
+  info: chart.info,
+  rows: buildChartRows(chart, chartIndex, yarns),
+  // Read and rewritten from the drawing itself at build time — see
+  // lib/patternChart.ts. Throws (failing the build) if the file's step
+  // layers don't line up with the steps listed in the yaml, so a chart and
+  // its instructions can't silently drift apart. What comes back is the
+  // drawing *once*, plus the id every copy of it below points at.
+  chart: {
+    ...loadPatternChart({
+      file: chart.file,
+      idPrefix: `chart-${chartIndex}`,
+      expectedSteps: chart.steps.length,
+    }),
+    preview: chart.preview,
+  },
+}));
+
+const partSections: Section[] = parts.map((part, partIndex) => ({
+  heading: part.part,
+  label: part.part,
+  info: part.info,
+  images: part.images,
+  rows: buildRenderRows(part, partIndex, yarns),
+  chart: null,
+}));
+
+const sections = [...chartSections, ...partSections];
 ---
 
 <div class="pattern-instructions" data-pattern-slug={pattern.id}>
@@ -31,22 +87,39 @@ const previewHexByYarnId = Object.fromEntries(
   {yarns.length > 0 && (
     <PatternSettingsCard slug={pattern.id} yarns={yarns} previewBase={previewBase} previewDefaultHexes={previewHexByYarnId} />
   )}
-  {parts.map((part, partIndex) => {
-    const rows = buildRenderRows(part, partIndex, yarns);
-    return (
-    <div class="card card-pattern-part">
-      <h3>{part.part}</h3>
-      {part.info && <p class="part-info"><ColoredSegments segments={resolveInfoText(part.info, yarns)} /></p>}
-      {part.images && part.images.length > 0 && (
+  {sections.map((section) => (
+    <div class="card card-pattern-part" class:list={{ "card-chart": section.chart !== null }}>
+      {/* The drawing, once, hidden — every copy below is a <use> of it. It
+          has to be in the rendered tree (not display:none) for those to
+          resolve, hence a zero-sized svg rather than no output at all. */}
+      {section.chart && <Fragment set:html={section.chart.defs} />}
+      {section.heading && <h3>{section.heading}</h3>}
+      {section.info && <p class="part-info"><ColoredSegments segments={resolveInfoText(section.info, yarns)} /></p>}
+      {section.images && section.images.length > 0 && (
         <div class="row-images part-images">
-          {part.images.map((src) => (
-            <img src={src} alt={`${part.part} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
+          {section.images.map((src) => (
+            <img src={src} alt={`${section.label} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
           ))}
         </div>
       )}
-      {rows.length > 0 && (
+      {/* The whole chart, plainly, before any of the steps: what you're
+          about to make, with nothing dimmed and nothing to check off. Every
+          step layer falls back to full opacity here precisely because this
+          copy sets none of the --chart-s* variables (see chartStepStyle). */}
+      {section.chart?.preview && (
+        <div class="chart-preview">
+          <svg
+            class="chart-svg"
+            viewBox={section.chart.viewBox}
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label={`${section.label}, complete`}
+          ><use href={`#${section.chart.rootId}`} /></svg>
+        </div>
+      )}
+      {section.rows.length > 0 && (
       <ol class="instruction-list">
-        {rows.map((row) => {
+        {section.rows.map((row) => {
           if (row.kind === "info") {
             return (
               <li class="row row-line row-info" data-line-id={row.lineId}>
@@ -58,7 +131,7 @@ const previewHexByYarnId = Object.fromEntries(
                   {row.images && row.images.length > 0 && (
                     <div class="row-images">
                       {row.images.map((src) => (
-                        <img src={src} alt={`${part.part} note photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
+                        <img src={src} alt={`${section.label} note photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
                       ))}
                     </div>
                   )}
@@ -69,7 +142,7 @@ const previewHexByYarnId = Object.fromEntries(
 
           if (row.kind === "line") {
             return (
-              <li class="row row-line" data-line-id={row.lineId}>
+              <li class="row row-line" data-line-id={row.lineId} data-chart-step={row.step}>
                 <label class="row-check">
                   <input type="checkbox" class="line-check" data-line-id={row.lineId} aria-label={row.label ? `Mark ${row.label} done` : "Mark done"} />
                 </label>
@@ -85,8 +158,25 @@ const previewHexByYarnId = Object.fromEntries(
                   {row.images && row.images.length > 0 && (
                     <div class="row-images">
                       {row.images.map((src) => (
-                        <img src={src} alt={row.label ? `${row.label} photo` : `${part.part} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
+                        <img src={src} alt={row.label ? `${row.label} photo` : `${section.label} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
                       ))}
+                    </div>
+                  )}
+                  {/* Its own copy of the chart under every single step, so
+                      following along never means scrolling back to one shared
+                      drawing at the bottom of a forty-round card. Which round
+                      it emphasizes is fixed at build time by the variables
+                      below — nothing here depends on what's checked off. */}
+                  {section.chart && row.step !== undefined && (
+                    <div class="row-step-chart">
+                      <svg
+                        class="chart-svg"
+                        viewBox={section.chart.viewBox}
+                        preserveAspectRatio="xMidYMid meet"
+                        role="img"
+                        aria-label={row.label ? `${row.label} on the chart` : `${section.label}, this step`}
+                        style={chartStepStyle(section.chart.steps, row.step)}
+                      ><use href={`#${section.chart.rootId}`} /></svg>
                     </div>
                   )}
                 </div>
@@ -112,7 +202,7 @@ const previewHexByYarnId = Object.fromEntries(
                   {row.images && row.images.length > 0 && (
                     <div class="row-images">
                       {row.images.map((src) => (
-                        <img src={src} alt={row.labelRange ? `${row.labelRange} photo` : `${part.part} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
+                        <img src={src} alt={row.labelRange ? `${row.labelRange} photo` : `${section.label} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
                       ))}
                     </div>
                   )}
@@ -143,8 +233,7 @@ const previewHexByYarnId = Object.fromEntries(
       </ol>
       )}
     </div>
-    );
-  })}
+  ))}
 </div>
 
 <script>
@@ -278,13 +367,35 @@ const previewHexByYarnId = Object.fromEntries(
     // cleaned up after it plays.
     function triggerConfetti() {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      const parts = container.querySelectorAll<HTMLElement>(".card-pattern-part");
-      const lastPart = parts[parts.length - 1];
-      if (!lastPart) return;
+
+      // Centred on the row that just completed the pattern: always the last
+      // checkable one, since ticking any earlier row only ever cascades
+      // *backwards*, so 100% can't be reached without it. Outermost row, so
+      // a repeat nested inside a collapsed block doesn't hand back the zero
+      // -height box of its own hidden detail list.
+      const checkboxes = container.querySelectorAll<HTMLInputElement>("input[data-line-id]");
+      const lastCheckbox = checkboxes[checkboxes.length - 1];
+      const anchor =
+        lastCheckbox?.closest<HTMLElement>(".row-block") ?? lastCheckbox?.closest<HTMLElement>(".row-line");
+      if (!anchor) return;
+
+      // A chart pattern's row carries a copy of the drawing and can easily be
+      // taller than the screen, so the burst goes at the middle of whatever
+      // part of the row is actually visible — the row's true centre could sit
+      // well outside the viewport, which is the whole failure this is
+      // avoiding. Falls back to the real centre when the row is off-screen
+      // entirely (nothing to split the difference between).
+      const rect = anchor.getBoundingClientRect();
+      const visibleTop = Math.max(rect.top, 0);
+      const visibleBottom = Math.min(rect.bottom, window.innerHeight);
+      const originY =
+        visibleBottom > visibleTop ? (visibleTop + visibleBottom) / 2 : rect.top + rect.height / 2;
 
       const burst = document.createElement("div");
       burst.className = "confetti-burst";
       burst.setAttribute("aria-hidden", "true");
+      burst.style.left = `${rect.left + rect.width / 2}px`;
+      burst.style.top = `${originY}px`;
 
       const PIECE_COUNT = 100;
       const MIN_RADIUS = 90;
@@ -292,11 +403,11 @@ const previewHexByYarnId = Object.fromEntries(
       for (let i = 0; i < PIECE_COUNT; i++) {
         const piece = document.createElement("span");
         piece.className = `confetti-piece confetti-c${(i % 5) + 1}`;
-        // Every piece starts pinned to the card's exact center (see
-        // .confetti-piece's top/left: 50% in global.css) and travels
-        // outward along its own random angle/radius — a uniform 0-2π angle
-        // spread is what makes the burst read as a circle rather than
-        // favoring any one direction.
+        // Every piece starts pinned to the burst's own origin point (see
+        // .confetti-piece's top/left: 50% in global.css, on a box with no
+        // width or height) and travels outward along its own random
+        // angle/radius — a uniform 0-2π angle spread is what makes the burst
+        // read as a circle rather than favoring any one direction.
         const angle = Math.random() * Math.PI * 2;
         const radius = MIN_RADIUS + Math.random() * (MAX_RADIUS - MIN_RADIUS);
         piece.style.setProperty("--end-x", `${Math.cos(angle) * radius}px`);
@@ -307,7 +418,11 @@ const previewHexByYarnId = Object.fromEntries(
         burst.appendChild(piece);
       }
 
-      lastPart.appendChild(burst);
+      // On <body>, not inside the row it's centred on: the burst is fixed
+      // and already positioned from that row's measured rect, so nesting it
+      // would only expose it to an ancestor's overflow or stacking context
+      // for no benefit.
+      document.body.appendChild(burst);
       // Longer than the slowest possible piece (0.35s fall-duration range +
       // 0.1s fall-delay range, both above), so every piece has finished
       // fading out before the whole burst is torn down.
@@ -570,7 +685,7 @@ const previewHexByYarnId = Object.fromEntries(
       row.addEventListener("click", (e) => {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
-        if (target.closest("img") || target.closest(".row-check")) return;
+        if (target.closest("img") || target.closest(".row-check") || target.closest(".row-step-chart")) return;
         const checkbox = row.querySelector<HTMLInputElement>('input[type="checkbox"]');
         if (!checkbox) return;
         checkbox.checked = !checkbox.checked;
@@ -656,10 +771,9 @@ const previewHexByYarnId = Object.fromEntries(
 @import "../../styles/breakpoints.css";
 
 .card-pattern-part {
-  /* Anchors .confetti-burst below, which is appended into whichever part
-     card is last once a pattern reaches 100% — without this the overlay
-     would position against the nearest positioned ancestor further up the
-     tree instead of this card. */
+  /* Positioned so the hidden chart <defs> below can be taken out of flow
+     against this card. The confetti burst used to be anchored here too —
+     it's fixed to the viewport now, for the reasons in global.css. */
   position: relative;
   background: var(--surface);
   border: 1px solid var(--card-border);
@@ -933,9 +1047,99 @@ const previewHexByYarnId = Object.fromEntries(
   border: none;
 }
 
+.card-chart {
+  /* The drawing's own greyscale ink is rewritten at build time to lean on
+     these two (see themeColor() in lib/patternChart.ts): black line work
+     becomes --chart-ink, lighter greys the same ink at proportionally lower
+     alpha, and white — which in a chart is a knockout punching a hole
+     through the lines behind a symbol, not a color — becomes the card's own
+     surface. Pointing them straight at the theme tokens is what makes a
+     chart drawn black-on-white legible in dark mode without a second
+     drawing or a whole-image inversion (which would wreck any deliberate
+     color a chart does use).
+
+     Set on the card, not on each drawing: custom properties inherit into a
+     <use>'s shadow content from the <use> element's own context, so every
+     copy in this card picks these up wherever it sits. */
+  --chart-ink: var(--text);
+  --chart-paper: var(--surface);
+}
+
+/* The shared definition (set:html, so it never gets Astro's scoping
+   attribute). Zero-sized already, but taken out of flow as well so it can't
+   contribute a stray line box between the card's heading and its content. */
+.card-chart :global(.chart-defs) {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Every copy of a chart — the preview and each step's own — is an empty
+   <svg> holding one <use>, sized entirely by its container. Clickable, into
+   the same kind of big view a photo opens into (see #chart-lightbox in
+   patterns/[slug].astro), with the same scale-on-hover cue every other
+   clickable picture on this site uses — the containers deliberately don't
+   clip, so the chart lifts slightly past its frame exactly like a photo
+   tile does. */
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: var(--cursor-pointer);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chart-svg:hover {
+  transform: scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-svg {
+    transition: none;
+  }
+
+  .chart-svg:hover {
+    transform: none;
+  }
+}
+
+/* The finished chart, above the steps. Full card width and framed, since
+   this one is meant to be looked at as a whole. */
+.chart-preview {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+}
+
+/* A step's own copy, under its instruction. Capped well below the card
+   width on purpose: a chart card now holds one of these per round, and at
+   full width a twenty-round pattern would be an endless scroll of
+   near-identical drawings — the cap keeps the list of rounds scannable while
+   leaving each chart big enough to actually work from. */
+.row-step-chart {
+  max-width: 420px;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+}
+
 @media (--mobile) {
   .row-images {
     grid-template-columns: 1fr;
+  }
+
+  /* Edge-to-edge inside the card on a phone — the extra inset costs more
+     chart detail than the framing is worth at that width. */
+  .chart-preview {
+    padding: 0.25rem;
+  }
+
+  .row-step-chart {
+    max-width: none;
+    padding: 0.25rem;
   }
 }
 </style>

@@ -9,6 +9,7 @@
 import DifficultyChip from "../creations/DifficultyChip.astro";
 import NewBadge from "../creations/NewBadge.astro";
 import TagChip from "../creations/TagChip.astro";
+import PatternFormatChip from "./PatternFormatChip.astro";
 import { toThumb } from "../../lib/images";
 import { getCreationAlt, type TagCategory } from "../../lib/tags";
 import type { CollectionEntry } from "astro:content";
@@ -46,6 +47,9 @@ const Tag = href ? "a" : "div";
     )}
     {(typeChipIds.length > 0 || effectiveTags.length > 0) && (
       <div class="tags">
+        {/* Same leading position as the list row's own format chip — see
+            PatternListItem.astro. */}
+        <PatternFormatChip format={pattern.data.format} size="small" />
         {typeChipIds.map((id) => (
           <TagChip id={id} taxonomy={typesTaxonomy} size="small" />
         ))}

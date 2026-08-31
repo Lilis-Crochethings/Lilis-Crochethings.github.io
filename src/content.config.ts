@@ -99,19 +99,38 @@ if (MATERIAL_IDS.length === 0) {
 }
 const materialId = z.enum(MATERIAL_IDS as [string, ...string[]]);
 
-// The stitch-abbreviation glossary (sc, mr, dc, ...) a pattern's own
-// `abbreviations` list references by id — read the same way as
-// materials/colors/tags above so a typo'd abbreviation is a build error
-// instead of a silently-dropped glossary entry.
-const abbreviationsYamlPath = fileURLToPath(new URL("./content/abbreviations.yaml", import.meta.url));
-const abbreviationsYaml = parseYaml(readFileSync(abbreviationsYamlPath, "utf-8")) as {
-  abbreviations: { id: string }[];
+// The stitch catalog (sc, mr, dc, ...) both of a pattern's own key lists
+// reference by id — read the same way as materials/colors/tags above so a
+// typo'd stitch is a build error instead of a silently-dropped entry.
+// STITCHES_WITH_IMAGE additionally backs the check that nothing is listed as
+// a symbol without having a drawing (see the patterns superRefine below).
+const stitchesYamlPath = fileURLToPath(new URL("./content/stitches.yaml", import.meta.url));
+const stitchesYaml = parseYaml(readFileSync(stitchesYamlPath, "utf-8")) as {
+  stitches: { id: string; image?: string }[];
 };
-const ABBREVIATION_IDS = abbreviationsYaml.abbreviations.map((abbreviation) => abbreviation.id);
-if (ABBREVIATION_IDS.length === 0) {
-  throw new Error("src/content/abbreviations.yaml must define at least one abbreviation");
+const STITCH_IDS = stitchesYaml.stitches.map((stitch) => stitch.id);
+if (STITCH_IDS.length === 0) {
+  throw new Error("src/content/stitches.yaml must define at least one stitch");
 }
-const abbreviationId = z.enum(ABBREVIATION_IDS as [string, ...string[]]);
+const stitchId = z.enum(STITCH_IDS as [string, ...string[]]);
+const STITCHES_WITH_IMAGE = new Set(
+  stitchesYaml.stitches.filter((stitch) => stitch.image).map((stitch) => stitch.id)
+);
+
+// How a pattern is written down (written / chart / pixel) — read the same
+// way as tags/types/colors above so a typo'd format is a build error. This
+// is deliberately a separate axis from `type` (crochet vs. embroidery):
+// the same chart can be worked in either craft, and the same craft can be
+// written up in any of these formats.
+const patternFormatsYamlPath = fileURLToPath(new URL("./content/pattern-formats.yaml", import.meta.url));
+const patternFormatsYaml = parseYaml(readFileSync(patternFormatsYamlPath, "utf-8")) as {
+  patternFormats: { id: string }[];
+};
+const PATTERN_FORMAT_IDS = patternFormatsYaml.patternFormats.map((format) => format.id);
+if (PATTERN_FORMAT_IDS.length === 0) {
+  throw new Error("src/content/pattern-formats.yaml must define at least one format");
+}
+const patternFormatId = z.enum(PATTERN_FORMAT_IDS as [string, ...string[]]);
 
 const general = defineCollection({
   loader: glob({ pattern: "general.md", base: "./src/content" }),
@@ -396,6 +415,52 @@ const outroEntry = z.union([
   z.object({ images: z.array(z.string()).min(1) }).strict(),
 ]);
 
+// One numbered step of a chart — the same written line a round/row gets in
+// a written pattern (`line`/`color`/`total`/`info`, reusing the exact same
+// shapes so a chart's instructions read and render identically), paired
+// implicitly with the `step-N` layer of the same number inside the chart's
+// SVG. Steps are matched to layers by position, so the Nth step here is the
+// Nth step layer in the file — see loadPatternChart() in lib/patternChart.ts,
+// which fails the build if the two counts don't line up.
+const chartStep = z.object({
+  line: instructionLineContent,
+  color: themedColor.optional(),
+  total: z.number().optional(),
+  info: z.string().optional(),
+  // Overrides the chart's own `worked-in` for just this step — e.g. a chart
+  // worked in rounds whose first step is really a foundation row.
+  "worked-in": z.enum(["rounds", "rows"]).optional(),
+  // Replaces the auto "Round N"/"Row N" label outright, for a step that
+  // isn't numbered at all (e.g. "Foundation" or "Edging").
+  label: z.string().optional(),
+  images: z.array(z.string()).optional(),
+}).strict();
+
+// One chart drawing. `file` is a public/ path to an SVG whose top-level
+// Inkscape layers are named step-1, step-2, ... (round-N/row-N are accepted
+// too, since that's how they're naturally named while drawing); every other
+// top-level layer is left alone and never becomes a step. Layers *inside* a
+// step that are hidden in the source file (e.g. a "direction" arrow layer)
+// are revealed only while that step is the active one.
+const patternChart = z.object({
+  // Shown as the card's heading. Optional — a pattern with a single chart
+  // doesn't need one, since the card is already unambiguous on its own.
+  name: z.string().optional(),
+  file: z.string(),
+  // Whether this chart's steps are rounds or rows. Omitted entirely for a
+  // chart whose steps aren't numbered at all (each step then needs its own
+  // `label`), same convention as a written part's own `worked-in`.
+  "worked-in": z.enum(["rounds", "rows"]).optional(),
+  info: z.string().optional(),
+  // Whether to open the card with the whole chart drawn plainly — every
+  // round at full strength, nothing to check off — so a visitor can see what
+  // they're about to make before working through it step by step. On by
+  // default; set false for a chart where the finished drawing says nothing
+  // the first step doesn't already.
+  preview: z.boolean().default(true),
+  steps: z.array(chartStep).min(1),
+}).strict();
+
 const patterns = defineCollection({
   loader: glob({ pattern: "**/*.yaml", base: "./src/content/patterns" }),
   schema: z.object({
@@ -409,6 +474,10 @@ const patterns = defineCollection({
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
     type: typeId,
     subtypes: z.array(subtypeId).optional(),
+    // How this pattern is written down — see pattern-formats.yaml. Defaults
+    // to "written" so every pattern that predates chart support keeps
+    // filtering correctly without needing the field added by hand.
+    format: patternFormatId.default("written"),
     colors: z.array(colorId).optional(),
     tags: z.array(tagId).optional(),
     // Published date and, separately, when the pattern text/photos were last
@@ -441,15 +510,40 @@ const patterns = defineCollection({
       // a base photo + region masks prepared for this.
       colorPreviewBase: z.string().optional(),
     }).optional(),
-    // Which glossary entries (from abbreviations.yaml) this pattern's
-    // instructions actually use — shown as a reference list on the detail
-    // page, in the order given here rather than the glossary's own order.
-    abbreviations: z.array(abbreviationId).optional(),
+    // The chart's key — which stitches (from stitches.yaml) this pattern's
+    // charts actually draw, in the order they should be listed. A bare id
+    // uses the catalog's own picture; the object form keeps the same id and
+    // label but swaps in this pattern's own drawing, for a chart that draws
+    // a stitch differently than the catalog does (those live in
+    // public/images/patterns/<slug>/symbols/). Same
+    // shorthand-or-full-object convention as a creation's `yarn` field.
+    //
+    // Deliberately still a separate list from `abbreviations` below even
+    // though both now point into the same catalog: a chart may want a stitch
+    // in its symbol key without repeating it in the abbreviation list, or
+    // the other way round.
+    symbols: z.array(z.union([
+      stitchId,
+      z.object({
+        id: stitchId,
+        image: z.string().optional(),
+        size: z.number().positive().optional(),
+      }).strict(),
+    ])).optional(),
+    // Which stitches this pattern's written instructions actually spell out
+    // in shorthand — shown as a reference list on the detail page, in the
+    // order given here rather than the catalog's own order.
+    abbreviations: z.array(stitchId).optional(),
     // The actual round-by-round/row-by-row instructions, split into named
     // parts (Body, Head, ...) — see src/content/patterns/chunky-ducky.yaml
     // for a fully worked example. Optional since most patterns currently
     // only have metadata ("full written instructions coming soon").
     pattern: z.array(patternPart).optional(),
+    // Chart drawings, one card each — the chart-format counterpart to
+    // `pattern` above, and renderable alongside it (a chart pattern can
+    // still have a plain written "Assembly" part). See
+    // src/content/patterns/puff-stitch-coaster.yaml for a worked example.
+    charts: z.array(patternChart).optional(),
     // Optional custom "you're done!" content — shown inside CongratsCard.astro
     // between its "Congratulations!" title and the card's own default
     // text/socials, e.g. a pattern-specific tip or a finished-piece photo the
@@ -511,6 +605,56 @@ const patterns = defineCollection({
         checkInfoColorRefs(entry.info, yarnIdSet, ["pattern", partIndex, "instructions", entryIndex, "info"], ctx);
       });
     });
+    (data.charts ?? []).forEach((chart, chartIndex) => {
+      checkInfoColorRefs(chart.info, yarnIdSet, ["charts", chartIndex, "info"], ctx);
+      chart.steps.forEach((step, stepIndex) => {
+        checkInfoColorRefs(step.info, yarnIdSet, ["charts", chartIndex, "steps", stepIndex, "info"], ctx);
+        // A step that isn't numbered has nothing to call itself — caught
+        // here rather than rendering an unlabelled row nobody can refer to.
+        if (!step.label && !(step["worked-in"] ?? chart["worked-in"])) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["charts", chartIndex, "steps", stepIndex],
+            message: `Step ${stepIndex + 1} has no label, and neither it nor its chart sets "worked-in", so it can't be numbered.`,
+          });
+        }
+      });
+    });
+
+    // A stitch listed as a symbol has to have a drawing behind it — the
+    // catalog's `image` is optional (shorthand like "()" has nothing to
+    // draw), so this is what stops a pattern asking for a symbol that would
+    // render as a blank tile in its key.
+    for (const [index, entry] of (data.symbols ?? []).entries()) {
+      const id = typeof entry === "string" ? entry : entry.id;
+      const hasOwnImage = typeof entry !== "string" && Boolean(entry.image);
+      if (!hasOwnImage && !STITCHES_WITH_IMAGE.has(id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["symbols", index],
+          message: `Stitch "${id}" has no image in stitches.yaml, so it can't be listed as a symbol — give it one there, or set \`image\` on this entry.`,
+        });
+      }
+    }
+
+    // The format is what the /patterns filter and the Info card promise a
+    // visitor they'll get, so it has to match what the file actually
+    // carries — a "chart" pattern with no charts is a broken promise, and a
+    // "written" one with charts would hide them from the format filter.
+    if (data.format === "chart" && !(data.charts ?? []).length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["charts"],
+        message: `format is "chart" but no charts are defined.`,
+      });
+    }
+    if (data.format !== "chart" && (data.charts ?? []).length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["format"],
+        message: `charts are defined, so format must be "chart" (got "${data.format}").`,
+      });
+    }
   }),
 });
 
@@ -678,15 +822,34 @@ const materialsCollection = defineCollection({
   }),
 });
 
-const abbreviationNode = z.object({
-  id: z.string(),
-  label: z.string(),
+
+
+const patternFormatsCollection = defineCollection({
+  loader: glob({ pattern: "pattern-formats.yaml", base: "./src/content" }),
+  schema: z.object({
+    patternFormats: z.array(z.object({
+      id: z.string(),
+      label: z.string(),
+      icon: z.string(),
+      description: z.string(),
+    })),
+  }),
 });
 
-const abbreviationsCollection = defineCollection({
-  loader: glob({ pattern: "abbreviations.yaml", base: "./src/content" }),
+// One stitch, whichever halves of it exist — see stitches.yaml for what each
+// field is for and why they're all optional but `id`/`label`.
+const stitchNode = z.object({
+  id: z.string(),
+  label: z.string(),
+  image: z.string().optional(),
+  size: z.number().positive().optional(),
+  info: z.string().optional(),
+});
+
+const stitchesCollection = defineCollection({
+  loader: glob({ pattern: "stitches.yaml", base: "./src/content" }),
   schema: z.object({
-    abbreviations: z.array(abbreviationNode),
+    stitches: z.array(stitchNode),
   }),
 });
 
@@ -699,7 +862,8 @@ export const collections = {
   colors,
   yarnTypes: yarnTypesCollection,
   materials: materialsCollection,
-  abbreviations: abbreviationsCollection,
+  stitches: stitchesCollection,
+  patternFormats: patternFormatsCollection,
   general,
   pages,
   about,

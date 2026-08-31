@@ -1,0 +1,66 @@
+title: "Puff Stitch Coaster"
+images:
+  - /images/patterns/puff-stitch-coaster/chart.svg
+  - "/images/creations/Coasters-1.webp"
+  - "/images/creations/Coasters-2.webp"
+description: |-
+  I designed this puff stitch coaster pattern especially with gradient yarn in mind. It works in alternating rounds, which not only helps the colors flow beautifully but also naturally gives the coaster a more rounded, circular shape as you work.
+
+  I also know that chart patterns aren't always the easiest to follow, especially when you're still getting used to reading them. That's why this pattern gives you the option to work through it round by round, with clear written instructions for every step. This makes it easier to follow along while also helping you become more comfortable with reading crochet charts.
+
+  And if you're already confident with charts, you can skip the step-by-step instructions and use the full crochet chart instead!
+
+difficulty: easy
+date: 2026-08-31
+uploadDate: 2026-08-31
+# lastModified: yyyy-mm-dd
+hoursSpent: 0.66
+hookSize: 4mm
+type: crochet
+format: chart
+subtypes:
+  - coaster
+
+# The chart's key. Ids come from stitches.yaml, the one catalog both this
+# list and `abbreviations` below draw from. A bare id uses the catalog's own
+# drawing; the object form keeps its id/label but swaps in this pattern's
+# picture (put those in public/images/patterns/puff-stitch-coaster/symbols/).
+symbols:
+  - mr
+  - ch
+  - sc
+  - slst
+  - puff
+
+abbreviations:
+  - mr
+  - slst
+  - ch
+  - sc
+  - inc
+  - puff
+  - ()
+
+charts:
+  # Top-level layers named step-1, step-2, ... in the drawing become the
+  # steps below, in order (round-N works too, which is what this file's own
+  # chart is drawn with). The build fails if the two ever stop lining up.
+  - file: /images/patterns/puff-stitch-coaster/chart.svg
+    worked-in: rounds
+    info: The project is worked in alternating rounds by first joining the round via a slip stitch into the first puff stitch, then chaining 2 to start the first puff stitch and turning your work. Every round is alternated. The puff stitches are worked into the gaps created by the chains, not in the puff stitches themselves.
+    steps:
+      - line: "MR: (1 puff, 1 ch) x 8, slst tw"
+        total: 16
+        info: Make a magic ring and chain 2 to start your first puff stitch. Continue to make 8 puff stitches with a single chain in between each puff stitch. Pull the ring closed once the round is complete and then slip stitch into the first puff stitch to join the round. Then turn your work to work the next round in the other direction.
+      - line: "(1 puff incr, 1 ch) x 8, slst tw"
+        total: 32
+        info: Chain 2 again to start the first puff stitch. Do a puff stitch increase (2 puff stitches in each ch-1 space), chain 1 between each increase. Slip stitch to join the round, then turn your work to continue the next round in the other direction again.
+      - line: "(1 puff, 1 ch, 1 puff incr, 1 ch) x 8, slst tw"
+        total: 48
+        info: Continue the pattern of a single puff stitch in the ch-1 space, with a puff stitch increase in the next ch-1 space. Repeat this pattern 8 times. Slip stitch to close the round and turn your work.
+      - line: "(1 puff incr, 1 ch, 1 puff, 1 ch, 1 puff, 1 ch) x8, slst"
+        total: 64
+        info: Continue the pattern of a puff stitch increase, followed by a single puff stitch into the next ch-1 spaces. Slip stitch to join the round and turn your work.
+      - line: "64 SC"
+        total: 64
+        info: Single crochet around in both the puff stitched and the ch-1 gaps to create a neatly finished border for the coaster. Slip stitch to join the round, or make an invisible join. Cut the yarn and weave in the ends

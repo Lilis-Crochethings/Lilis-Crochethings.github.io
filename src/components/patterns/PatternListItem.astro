@@ -1,5 +1,6 @@
 ---
 import TagChip from "../creations/TagChip.astro";
+import PatternFormatChip from "./PatternFormatChip.astro";
 import DifficultyChip from "../creations/DifficultyChip.astro";
 import NewBadge from "../creations/NewBadge.astro";
 import TileCarousel from "../TileCarousel.astro";
@@ -27,6 +28,7 @@ const patternAlt = getCreationAlt(pattern.data.title, type, pattern.data.subtype
   data-tags={effectiveTags.join(" ")}
   data-difficulty={difficulty}
   data-type={typeChipIds.join(" ")}
+  data-format={pattern.data.format}
 >
   <div class="list-item" role="link" tabindex="0">
     <DifficultyChip difficulty={difficulty} hideOnMobile />
@@ -39,6 +41,10 @@ const patternAlt = getCreationAlt(pattern.data.title, type, pattern.data.subtype
       {pattern.data.description?.text && <p class="preview">{pattern.data.description.text}</p>}
       {(typeChipIds.length > 0 || effectiveTags.length > 0) && (
         <div class="tags">
+          {/* First in the row: what shape a pattern's instructions come in is
+              the coarsest thing to know about it, and unlike the craft type
+              it isn't already implied by the photo. */}
+          <PatternFormatChip format={pattern.data.format} />
           {typeChipIds.map((id) => (
             <TagChip id={id} taxonomy={typesTaxonomy} />
           ))}

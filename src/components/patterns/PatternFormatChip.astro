@@ -1,0 +1,25 @@
+---
+// The "Written"/"Chart"/"Pixel" chip shown on a pattern's tile, rendered by
+// the same <TagChip> — and so styled identically to — the craft-type chips
+// beside it. How a pattern is written down is its own axis (see
+// pattern-formats.yaml), but on a tile it reads as one more thing the
+// pattern *is*, alongside "Crochet" and "Coaster".
+//
+// The format list is resolved here rather than passed down as a prop the way
+// the tag and type taxonomies are: those are already loaded by the pages
+// that render tiles (for the filter panel, alt text, and so on), whereas
+// nothing upstream has any use for this one. Drilling it through every page
+// that shows a tile would be plumbing for a single lookup, and content
+// collections are already loaded once and cached, so reading it here costs
+// nothing per tile.
+import { getCollection } from "astro:content";
+import TagChip from "../creations/TagChip.astro";
+import type { ChipSize } from "../../lib/chips";
+
+const { format, size } = Astro.props as { format: string; size?: ChipSize };
+
+const formats = (await getCollection("patternFormats"))[0].data.patternFormats;
+const entry = formats.find((candidate) => candidate.id === format);
+---
+
+{entry && <TagChip label={entry.label} icon={entry.icon} size={size} />}

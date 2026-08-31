@@ -1,6 +1,7 @@
 import type { CollectionEntry } from "astro:content";
 
 export type PatternPart = NonNullable<CollectionEntry<"patterns">["data"]["pattern"]>[number];
+export type PatternChart = NonNullable<CollectionEntry<"patterns">["data"]["charts"]>[number];
 type InstructionEntry = NonNullable<PatternPart["instructions"]>[number];
 type LineContent = Extract<InstructionEntry, { line: unknown }>["line"];
 type RawSegment = Exclude<LineContent, string>[number];
@@ -55,6 +56,10 @@ export type RenderLineRow = {
   total?: number;
   info?: RenderSegment[];
   images?: string[];
+  // Only set for a chart's rows: which `step-N` layer of that chart's SVG
+  // this row drives (see buildChartRows below). Written-pattern rows leave
+  // it undefined, so one row template renders both without branching.
+  step?: number;
 };
 
 // A block collapses to a single tile (lineIds/labelRange/segments describe
@@ -75,6 +80,36 @@ export type RenderBlockRow = {
 };
 
 export type RenderRow = RenderInfoRow | RenderLineRow | RenderBlockRow;
+
+// A chart's steps are already a flat, numbered list — one row per `step-N`
+// layer in the drawing — so unlike a written part (buildRenderRows below)
+// there's no counter to run, no blocks to expand, and no un-numbered info
+// entries to skip past: row i is always step i + 1, which is what keeps a
+// row labelled "Round 3" pointing at the layer named "step-3" no matter
+// what else the chart contains. Everything else (segment colors, yarn
+// references inside `info`) is resolved by the same helpers a written line
+// uses, so a chart's instructions read and behave identically to a written
+// pattern's.
+export function buildChartRows(chart: PatternChart, chartIndex: number, yarns: PatternYarn[]): RenderLineRow[] {
+  const textColorToYarnId = buildTextColorToYarnId(yarns);
+
+  return chart.steps.map((step, stepIndex) => {
+    const workedIn = step["worked-in"] ?? chart["worked-in"];
+    return {
+      kind: "line",
+      // Namespaced away from a written part's own `${partIndex}:${entryIndex}`
+      // ids, so a pattern with both charts and written parts can share one
+      // progress store without the two colliding.
+      lineId: `chart${chartIndex}:${stepIndex}`,
+      label: step.label ?? roundLabel(workedIn, stepIndex + 1),
+      segments: resolveSegments(step.line, step.color, undefined, textColorToYarnId),
+      total: step.total,
+      info: step.info ? resolveInfoText(step.info, yarns) : undefined,
+      images: step.images,
+      step: stepIndex + 1,
+    };
+  });
+}
 
 function roundLabel(workedIn: PatternPart["worked-in"], n: number): string | undefined {
   if (!workedIn) return undefined;

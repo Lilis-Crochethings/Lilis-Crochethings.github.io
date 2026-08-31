@@ -12,11 +12,13 @@ import PatternAbbreviationsDrawer from '../../components/patterns/PatternAbbrevi
 import AboutMeCard from '../../components/patterns/AboutMeCard.astro';
 import CongratsCard from '../../components/patterns/CongratsCard.astro';
 import PatternCard from '../../components/patterns/PatternCard.astro';
+import StitchInfo from '../../components/patterns/StitchInfo.astro';
 import { getCollection } from "astro:content";
 import { getEffectiveTags, getCreationAlt, getTagLabel } from "../../lib/tags";
 import { formatHours } from "../../lib/time";
 import { YARN_WEIGHT_LABELS } from "../../lib/yarnWeight";
 import { resolveYarn } from "../../lib/yarn";
+import { socialImage } from "../../lib/images";
 import { seededShuffle } from "../../lib/seededShuffle";
 
 export async function getStaticPaths() {
@@ -132,18 +134,74 @@ function isWhiteHex(hex?: string): boolean {
   return clean === "fff" || clean === "ffffff";
 }
 
-const abbreviationsEntry = (await getCollection("abbreviations"))[0];
-const abbreviationsCatalog = abbreviationsEntry.data.abbreviations;
-// Kept in the order the pattern lists them (not the glossary's own order) —
-// that's usually the order the abbreviations first show up in the
-// instructions themselves.
-const patternAbbreviations = (data.abbreviations ?? [])
-  .map((id) => abbreviationsCatalog.find((abbr) => abbr.id === id))
-  .filter((abbr) => abbr !== undefined);
+// A pattern's key has two halves, shown as two sections of one card: the
+// symbols its chart is drawn with, and the shorthand its written
+// instructions are spelled in. Both are drawn from the one stitch catalog
+// (stitches.yaml) — most stitches have both halves — but stay separate lists
+// on the pattern, since a chart can want a stitch in its symbol key without
+// repeating it in the abbreviation list, or the other way round.
+//
+// Both are kept in the order the pattern lists them, not the catalog's own:
+// that's usually the order they first show up in the instructions.
+const stitchesCatalog = (await getCollection("stitches"))[0].data.stitches;
 
-const hasPatternInstructions = Boolean(data.pattern && data.pattern.length > 0);
+// A pattern whose chart draws a stitch differently than the catalog does
+// swaps in its own picture (and/or size) while keeping the catalog's id,
+// label and info — see `symbols` in content.config.ts.
+const patternSymbols = (data.symbols ?? [])
+  .map((entry) => {
+    const id = typeof entry === "string" ? entry : entry.id;
+    const stitch = stitchesCatalog.find((candidate) => candidate.id === id);
+    if (!stitch) return undefined;
+    if (typeof entry === "string") return stitch;
+    return { ...stitch, image: entry.image ?? stitch.image, size: entry.size ?? stitch.size };
+  })
+  .filter((symbol) => symbol !== undefined);
+
+const patternAbbreviations = (data.abbreviations ?? [])
+  .map((id) => stitchesCatalog.find((stitch) => stitch.id === id))
+  .filter((stitch) => stitch !== undefined);
+
+// One card holds whichever halves of the key exist, each under its own
+// heading — a written pattern's card is headed "Abbreviations" exactly as it
+// always was, and a chart pattern simply gains a "Symbols" section in front
+// of it rather than the two being renamed into one combined title.
+const patternKey = [...patternSymbols, ...patternAbbreviations];
+
+// Every symbol sits in a box this wide, so a 30px puff and a 14px single
+// crochet still line up under each other and their labels all start at the
+// same place. Taken from the widest symbol actually listed rather than a
+// fixed number, so adding a bigger one to stitches.yaml can't leave it
+// overflowing its column.
+const symbolColumn = Math.max(...patternSymbols.map((symbol) => symbol.size ?? 26), 0);
+
+// Not a heading — the accessible name for the mobile drawer's 44px nub and
+// its dialog, which have to describe the whole card in one phrase.
+const keyLabel =
+  patternSymbols.length > 0 && patternAbbreviations.length > 0
+    ? "Symbols & abbreviations"
+    : patternSymbols.length > 0
+      ? "Symbols"
+      : "Abbreviations";
+
+// Charts count: they're rendered by the same component, into the same
+// checkable rows, and feed the same progress bar — so everything gated on
+// this (the Progress card, the abbreviations drawer, the sticky column)
+// applies to a chart pattern exactly as it does to a written one.
+const hasPatternInstructions = Boolean(
+  (data.pattern && data.pattern.length > 0) || (data.charts && data.charts.length > 0)
+);
+
+const patternFormat = (await getCollection("patternFormats"))[0].data.patternFormats
+  .find((format) => format.id === data.format)!;
+
+const hasCharts = (data.charts ?? []).length > 0;
 
 const infoItems = [
+  // First line of the card: what shape the instructions come in is the thing
+  // a visitor most needs to know before deciding to follow this pattern at
+  // all — a chart and a written pattern are read completely differently.
+  { icon: patternFormat.icon, label: patternFormat.label, title: "Pattern format" },
   data.date && { icon: "/images/icons/calendar.svg", label: data.date.toLocaleDateString(), title: "Published" },
   data.lastModified && { icon: "/images/icons/last-modified.svg", label: data.lastModified.toLocaleDateString(), title: "Last updated" },
   data.hoursSpent && { icon: "/images/icons/clock.svg", label: formatHours(data.hoursSpent), title: "Time spent" },
@@ -181,6 +239,10 @@ const tagLabels = effectiveTags.map((id) => getTagLabel(id, taxonomy));
 const pageDescription = [
   baseDescription,
   craftDescription,
+  // Stated outright rather than left implicit — "chart" vs. "written" is a
+  // real search intent ("crochet chart pattern"), and the one thing the
+  // hand-written description above is least likely to spell out itself.
+  patternFormat.description,
   tagLabels.length ? `Tags: ${tagLabels.join(", ")}.` : null,
   data.searchTerms?.length ? `Also known as: ${data.searchTerms.join(", ")}.` : null,
 ].filter(Boolean).join(" ");
@@ -217,7 +279,7 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
 <BaseLayout
   title={pageTitle}
   description={pageDescription}
-  image={data.images[0]}
+  image={socialImage(data.images)}
 >
   <script type="application/ld+json" is:inline set:html={JSON.stringify(creativeWorkSchema)} />
   <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbSchema)} />
@@ -368,19 +430,48 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
       </div>
     )}
 
-    {(hasPatternInstructions || patternAbbreviations.length > 0) && (
+    {(hasPatternInstructions || patternKey.length > 0) && (
       <div class="col-right-sticky">
-        {patternAbbreviations.length > 0 && (
+        {patternKey.length > 0 && (
           <div class="card card-abbreviations">
-            <h2>Abbreviations</h2>
-            <dl class="abbr-table">
-              {patternAbbreviations.map((abbr) => (
-                <>
-                  <dt class="abbr-key">{abbr.id.toUpperCase()}:</dt>
-                  <dd class="abbr-meaning">{capitalize(abbr.label)}</dd>
-                </>
-              ))}
-            </dl>
+            {patternSymbols.length > 0 && (
+              <>
+                <h2>Symbols</h2>
+                <dl class="abbr-table symbol-table" style={`--symbol-column:${symbolColumn}px`}>
+                  {patternSymbols.map((symbol) => (
+                    <>
+                      <dt class="abbr-key symbol-key">
+                        <span
+                          class="symbol-icon mask-icon"
+                          style={`--symbol-size:${symbol.size ?? 26}px; mask-image:url(${symbol.image}); -webkit-mask-image:url(${symbol.image});`}
+                          aria-hidden="true"
+                        ></span>
+                      </dt>
+                      <dd class="abbr-meaning">
+                        {capitalize(symbol.label)}
+                        {symbol.info && <StitchInfo text={symbol.info} id={`stitch-card-symbol-${symbol.id}`} />}
+                      </dd>
+                    </>
+                  ))}
+                </dl>
+              </>
+            )}
+            {patternAbbreviations.length > 0 && (
+              <>
+                <h2>Abbreviations</h2>
+                <dl class="abbr-table">
+                  {patternAbbreviations.map((abbr) => (
+                    <>
+                      <dt class="abbr-key">{abbr.id.toUpperCase()}:</dt>
+                      <dd class="abbr-meaning">
+                        {capitalize(abbr.label)}
+                        {abbr.info && <StitchInfo text={abbr.info} id={`stitch-card-abbr-${abbr.id}`} />}
+                      </dd>
+                    </>
+                  ))}
+                </dl>
+              </>
+            )}
           </div>
         )}
         {hasPatternInstructions && <PatternProgressBar />}
@@ -395,8 +486,8 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
     Printing and copying are disabled for this pattern.
   </div>
 
-  {hasPatternInstructions && patternAbbreviations.length > 0 && (
-    <PatternAbbreviationsDrawer abbreviations={patternAbbreviations} />
+  {hasPatternInstructions && patternKey.length > 0 && (
+    <PatternAbbreviationsDrawer abbreviations={patternAbbreviations} symbols={patternSymbols} label={keyLabel} />
   )}
 
   <LightboxChrome id="lightbox">
@@ -406,6 +497,21 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
       </div>
     </LightboxStage>
   </LightboxChrome>
+
+  {/* Charts get their own lightbox rather than joining the photo one above:
+      they aren't files to load but live nodes on the page (see
+      lib/patternChart.ts — one shared drawing, and each copy's emphasized
+      round carried in inline custom properties), so they're handed over as
+      `node` items and the photo pipeline's fetch/decode/slide is skipped
+      entirely. Keeping them separate also means paging through the charts
+      with the arrows doesn't wander off into the photos. */}
+  {hasCharts && (
+    <LightboxChrome id="chart-lightbox">
+      <LightboxStage>
+        <div class="lightbox-frame" id="chart-lightbox-frame"></div>
+      </LightboxStage>
+    </LightboxChrome>
+  )}
 </BaseLayout>
 
 <script>
@@ -429,6 +535,38 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
   thumbs.forEach((thumb, index) => {
     thumb.addEventListener("click", () => chrome?.open(index));
   });
+
+  // Every copy of every chart on the page, in document order — the
+  // full-pattern preview at the top of a card followed by that card's steps
+  // — so the arrows page through a chart round by round.
+  const chartOverlay = document.getElementById("chart-lightbox");
+  const chartFrame = document.getElementById("chart-lightbox-frame");
+  const chartSvgs = Array.from(document.querySelectorAll<SVGSVGElement>(".chart-svg"));
+
+  if (chartOverlay && chartFrame && chartSvgs.length > 0) {
+    const chartChrome = initLightboxChrome({
+      overlay: chartOverlay,
+      frame: chartFrame,
+      // Node items never touch the image pipeline (see LightboxItem.node in
+      // lib/lightboxNav.ts); this detached <img> only exists to satisfy the
+      // shared interface, and is never attached or loaded.
+      img: document.createElement("img"),
+      items: chartSvgs.map((svg) => ({
+        src: "",
+        alt: svg.getAttribute("aria-label") ?? "",
+        // A fresh clone each time, so the lightbox's copy can't inherit — or
+        // leave behind — anything from the one still on the page. The clone's
+        // <use> still resolves against the same shared <defs>, and its inline
+        // --chart-s* variables travel with it, so it opens showing exactly
+        // the round that was clicked.
+        node: () => svg.cloneNode(true),
+      })),
+    });
+
+    chartSvgs.forEach((svg, index) => {
+      svg.addEventListener("click", () => chartChrome.open(index));
+    });
+  }
 </script>
 
 <script>
@@ -765,8 +903,13 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
 
 /* See creations/[slug].astro's identical rules for why these need
    :global()/id-scoping — <LightboxChrome>/<LightboxStage> render shared
-   markup from child components. */
-:global(#lightbox.lb-overlay) {
+   markup from child components. Both of this page's overlays are listed in
+   every one of these rules on purpose: <LightboxChrome> only goes as far as
+   display:flex when open, leaving placement to the page, so an overlay
+   missing from this first rule gets flex's defaults and pins its content to
+   the top-left corner instead of centring it. */
+:global(#lightbox.lb-overlay),
+:global(#chart-lightbox.lb-overlay) {
   align-items: center;
   justify-content: center;
   padding: 2rem;
@@ -785,6 +928,36 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
   max-width: 80vw;
   max-height: 85vh;
   object-fit: contain;
+}
+
+/* A chart is line art on a transparent background, so on the lightbox's
+   near-black backdrop there'd be nothing to see. This copy is always dark
+   ink on white paper regardless of the page's theme — the same treatment,
+   and the same reason, as an .svg sitting among the photos (see global.css).
+   Fixed colours rather than the theme tokens: the paper here is white by
+   decision, not by whatever surface the page happens to be using. */
+#chart-lightbox-frame {
+  background: #ffffff;
+  padding: 1.25rem;
+}
+
+/* Id-scoped on purpose: .chart-svg's own rules come from
+   PatternInstructions.astro, and its scoping attribute rides along on the
+   clone, so a plain class selector here would only tie with them. */
+#chart-lightbox-frame :global(.chart-svg) {
+  --chart-ink: #1b1b1b;
+  --chart-paper: #ffffff;
+  width: min(80vw, 78vh);
+  max-width: 80vw;
+  max-height: 82vh;
+  height: auto;
+  cursor: default;
+}
+
+/* The page copy lifts on hover because it opens this one; this one is
+   already open, so it stays put. */
+#chart-lightbox-frame :global(.chart-svg:hover) {
+  transform: none;
 }
 
 /* Grid (not a flex/definition-list default) so every dt/dd pair lands in
@@ -808,10 +981,55 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
   text-align: right;
 }
 
+/* A second section in the same card (Symbols first, then Abbreviations)
+   needs the space a card's own padding gives the first one. Targets any h2
+   after the first rather than a dedicated class, so the rule can't drift out
+   of sync with which section happens to come first. */
+.card-abbreviations h2 ~ h2 {
+  margin-top: 1.5rem;
+}
+
+/* Symbols reuse the abbreviation table's grid wholesale (including its
+   two-pair widening at tablet, which keys off .abbr-table) — only the key
+   column differs, holding a drawn symbol where an abbreviation holds text.
+
+   Abbreviations are right-aligned so their colons line up; symbols can't be,
+   because they're all different widths (see `size` in symbols.yaml) and
+   aligning them to either edge would leave the other edge ragged. Instead
+   every one gets the same box — as wide as the widest symbol in this key —
+   and is centred in it, so the symbols line up on a shared axis and their
+   labels all begin at the same place regardless of how wide each drawing is. align-items: center rather than the row's
+   default stretch, so a symbol taller than its label still sits level with
+   it. */
+.symbol-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--symbol-column, 26px);
+}
+
+.symbol-table .abbr-meaning {
+  align-self: center;
+}
+
+/* Masked rather than shown as a plain <img>, so a symbol drawn in black
+   takes the same primary colour the abbreviation keys next to it use, in
+   both themes — the same way every other icon on this site works.
+   --symbol-size comes from the symbol's own catalog entry (see
+   symbols.yaml): symbols don't fill their canvas equally, so one shared box
+   would leave a wide flat chain tiny next to a compact single crochet. */
+.symbol-icon {
+  display: block;
+  width: var(--symbol-size, 26px);
+  height: var(--symbol-size, 26px);
+  background-color: var(--primary);
+}
+
 .abbr-meaning {
   margin: 0;
   color: var(--text);
 }
+
 
 .materials-grid {
   display: grid;
@@ -1186,7 +1404,8 @@ a.yarn-material-tile:hover {
     grid-template-columns: 1fr;
   }
 
-  :global(#lightbox.lb-overlay) {
+  :global(#lightbox.lb-overlay),
+  :global(#chart-lightbox.lb-overlay) {
     padding: 0.5rem;
   }
 
@@ -1194,23 +1413,34 @@ a.yarn-material-tile:hover {
     max-width: 92vw;
   }
 
-  :global(#lightbox .lb-nav) {
+  /* Matches the photo's own widening just above — with the overlay's padding
+     down to 0.5rem there's no reason for a chart to hold back at 80vw. */
+  #chart-lightbox-frame :global(.chart-svg) {
+    width: min(92vw, 78vh);
+    max-width: 92vw;
+  }
+
+  :global(#lightbox .lb-nav),
+  :global(#chart-lightbox .lb-nav) {
     width: 32px;
     height: 32px;
   }
 
-  :global(#lightbox .lb-nav svg) {
+  :global(#lightbox .lb-nav svg),
+  :global(#chart-lightbox .lb-nav svg) {
     width: 18px;
     height: 18px;
   }
 
-  :global(#lightbox .lb-prev) {
+  :global(#lightbox .lb-prev),
+  :global(#chart-lightbox .lb-prev) {
     right: auto;
     left: 0.5rem;
     margin-right: 0;
   }
 
-  :global(#lightbox .lb-next) {
+  :global(#lightbox .lb-next),
+  :global(#chart-lightbox .lb-next) {
     left: auto;
     right: 0.5rem;
     margin-left: 0;

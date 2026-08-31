@@ -1,0 +1,208 @@
+---
+// The "how is this stitch made" explainer in a pattern's key: an info icon
+// beside the stitch's name, and the tooltip it pops up. Both halves live here
+// so the button and the bubble it controls can't drift apart.
+//
+// Reveal-on-demand rather than a second line under every entry — the key is
+// scanned for the one stitch you don't know, and a paragraph under each of
+// eight entries buries the seven you do.
+//
+// The bubble is a real [popover], which is what makes a floating tooltip
+// workable here at all: this key sits in a ~300px sidebar on desktop and
+// inside a scrolling drawer on mobile, and an ordinary absolutely-positioned
+// tooltip would be clipped by that drawer's own overflow and would spill out
+// of the narrow card. A popover renders in the browser's top layer instead,
+// so no ancestor's overflow, stacking context or z-index can touch it — and
+// it brings Escape and click-outside dismissal along for free.
+//
+// Semantically still a disclosure (aria-expanded/aria-controls) rather than
+// aria-describedby: the text only exists in the DOM while open, and a
+// description pointing at a display:none element isn't reliably announced.
+//
+// `id` is supplied by the caller rather than derived from the stitch, since
+// the same stitch renders in both the on-page card and the drawer, and an
+// abbreviation's own id can be something like "()".
+const { text, id } = Astro.props as { text: string; id: string };
+---
+
+<button
+  type="button"
+  class="stitch-info-toggle"
+  aria-expanded="false"
+  aria-controls={id}
+  aria-label="How this stitch is made"
+>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <line x1="12" y1="11" x2="12" y2="16" />
+    <circle cx="12" cy="7.5" r="0.75" fill="currentColor" stroke="none" />
+  </svg>
+</button>
+<span class="stitch-tooltip" id={id} popover="auto" role="tooltip">{text}</span>
+
+<style>
+/* Matches .info-icon-btn on patterns/index.astro — same glyph, same 15px
+   box, same primary tint — so an info icon means the same thing wherever it
+   turns up on this site. Nudged down slightly: it sits beside a line of
+   text, not centred in a heading row. */
+.stitch-info-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-left: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  cursor: var(--cursor-pointer);
+  vertical-align: -0.1em;
+}
+
+.stitch-info-toggle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.stitch-info-toggle:hover {
+  opacity: 0.7;
+}
+
+/* Dimmed while its tooltip is up, so an opened entry reads as the one you
+   opened rather than as another closed one. */
+.stitch-info-toggle[aria-expanded="true"] {
+  opacity: 0.55;
+}
+
+/* Same bubble as the "Time spent" tooltip on patterns/index.astro. The
+   inset/margin/border resets undo the UA's own [popover] styling, which
+   otherwise centres it in the viewport with a border; the script below sets
+   left/top from the button's measured position. */
+.stitch-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  border: none;
+  width: max-content;
+  max-width: min(240px, 70vw);
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: var(--tooltip-bg);
+  color: white;
+  font-family: "Quicksand", sans-serif;
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.35;
+  overflow: visible;
+  /* Only matters in the no-popover fallback below — a real popover is in the
+     top layer, above everything, regardless of z-index. */
+  z-index: 2100;
+}
+
+/* Deliberately its own rule, not merged with the fallback below: a browser
+   without popover support treats :popover-open as an invalid selector and
+   throws the whole rule away, which would take the fallback with it. */
+.stitch-tooltip:popover-open {
+  display: block;
+}
+
+/* The fallback path (see the script): without popover support the attribute
+   is inert, so the bubble has to be hidden and shown by class instead. */
+.stitch-tooltip {
+  display: none;
+}
+
+.stitch-tooltip.is-open {
+  display: block;
+}
+</style>
+
+<script>
+  // One listener pass for every instance on the page — Astro bundles a
+  // component's script once no matter how many times it renders, so this
+  // wires the on-page key and the mobile drawer's copy in the same go.
+  const supportsPopover =
+    typeof HTMLElement !== "undefined" && Object.hasOwn(HTMLElement.prototype, "popover");
+
+  const toggles = Array.from(document.querySelectorAll<HTMLButtonElement>(".stitch-info-toggle"));
+
+  // Placed after showing, not before: the bubble needs to be laid out for its
+  // own size to be measurable. Nothing paints between statements in the same
+  // task, so measuring and moving it here can't flash at the wrong spot.
+  function place(button: HTMLElement, tip: HTMLElement) {
+    const GAP = 8;
+    const anchor = button.getBoundingClientRect();
+    const bubble = tip.getBoundingClientRect();
+
+    // Centred on the icon, then pulled back inside the viewport — in a 300px
+    // sidebar a 240px bubble would otherwise hang off the edge.
+    const centred = anchor.left + anchor.width / 2 - bubble.width / 2;
+    const left = Math.max(GAP, Math.min(centred, window.innerWidth - bubble.width - GAP));
+
+    // Above the icon by preference, flipped below when there isn't room —
+    // the key's first entries sit near the top of the viewport on mobile.
+    const above = anchor.top - bubble.height - GAP;
+    const top = above >= GAP ? above : anchor.bottom + GAP;
+
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  }
+
+  function close(button: HTMLElement, tip: HTMLElement) {
+    if (button.getAttribute("aria-expanded") !== "true") return;
+    button.setAttribute("aria-expanded", "false");
+    if (supportsPopover) tip.hidePopover();
+    else tip.classList.remove("is-open");
+  }
+
+  function open(button: HTMLElement, tip: HTMLElement) {
+    if (button.getAttribute("aria-expanded") === "true") return;
+    button.setAttribute("aria-expanded", "true");
+    if (supportsPopover) tip.showPopover();
+    else tip.classList.add("is-open");
+    place(button, tip);
+  }
+
+  toggles.forEach((toggle) => {
+    const tipId = toggle.getAttribute("aria-controls");
+    // getElementById, not querySelector: an abbreviation-derived id can
+    // contain characters (brackets, parentheses) a selector would have to
+    // escape.
+    const tip = tipId ? document.getElementById(tipId) : null;
+    if (!tip) return;
+
+    toggle.addEventListener("click", () => {
+      if (toggle.getAttribute("aria-expanded") === "true") close(toggle, tip);
+      else open(toggle, tip);
+    });
+
+    // A popover dismissed by Escape or an outside click closes itself without
+    // going through close() above, which would strand aria-expanded on true.
+    tip.addEventListener("toggle", (e) => {
+      const state = (e as ToggleEvent).newState;
+      toggle.setAttribute("aria-expanded", state === "open" ? "true" : "false");
+    });
+
+    // A real tooltip opens on hover too, but only where hovering is a thing —
+    // on touch the click above is the whole interaction.
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      toggle.addEventListener("mouseenter", () => open(toggle, tip));
+      toggle.addEventListener("mouseleave", () => close(toggle, tip));
+    }
+  });
+
+  // The bubble is positioned once, in viewport coordinates, so scrolling
+  // would leave it behind while its icon moves away. Closing is both simpler
+  // and less distracting than chasing the icon down the page.
+  const closeAll = () => {
+    toggles.forEach((toggle) => {
+      const tipId = toggle.getAttribute("aria-controls");
+      const tip = tipId ? document.getElementById(tipId) : null;
+      if (tip) close(toggle, tip);
+    });
+  };
+
+  window.addEventListener("scroll", closeAll, { passive: true, capture: true });
+  window.addEventListener("resize", closeAll, { passive: true });
+</script>

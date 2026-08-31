@@ -1,0 +1,39 @@
+title: "Dice Bag v1 🎲"
+difficulty: hard
+images:
+  - "/images/creations/Dice-bag-v1-4.webp"
+  - "/images/creations/Dice-bag-v1-3.webp"
+  - "/images/creations/Dice-bag-v1-1.webp"
+  - "/images/creations/Dice-bag-v1-2.webp"
+description: |-
+  My first go at a dice bag for our D&D nights 🎲. It's a drawstring pouch with separate inner pockets, so each set of dice gets its own compartment instead of everything clattering around together — and when you pull the cord shut, the whole thing folds up into a neat little bowl.
+
+  I wanted to make this bag as a birthday present and I bought the gradient yarn especially for this project. However, after my first attempt I wasn't happy with how the gradient showed up... or how it just didn't show up. So I started my [second version](/creations/dice-bag-v2) in hopes it would turn out better.
+searchTerms:
+  - "Dice pouch"
+  - "D&D"
+  - "Dungeons and Dragons"
+  - "TTRPG"
+  - "Drawstring bag"
+date: 2026-06-17
+uploadDate: 2026-08-31
+# instagramLink: ""
+hoursSpent: 19.75
+hookSize: "3mm"
+yarn:
+  - "Sultan Shadow - Black / blue"
+patterns:
+  - creator: "Michelle Hall"
+    items:
+      - name: "Large Divided Dice Bag"
+        link: "https://www.ravelry.com/patterns/library/large-divided-dice-bag"
+        platform: website
+type: crochet
+subtypes:
+  - bag
+colors:
+  - blue
+  - black
+yarnTypes:
+  - cotton
+# tags:

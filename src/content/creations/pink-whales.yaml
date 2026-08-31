@@ -1,0 +1,45 @@
+title: "Pink Whales 🐳💗"
+difficulty: easy
+images:
+  - "/images/creations/Pink-whale-4.webp"
+  - "/images/creations/Pink-whale-3.webp"
+  - "/images/creations/Pink-whale-1.webp"
+  - "/images/creations/Pink-whale-2.webp"
+description: |-
+  These cuties use the same pattern as my [I whale miss you whales](/creations/i-whale-miss-you). However, this time I wanted to make them more fluffy, so I made them with chenille yarn.
+
+  I originally came up with this idea because I wanted to put an NFC chip inside the whale. I first made the smallest one with a 2mm crochet hook, but it ended up being too small to fit the NFC chip. So I made a second version with a 3mm crochet hook, which fit the chip perfectly! Both took me 45 minutes to make.
+
+  After these pictures, I turned the one with the NFC chip into a keychain to go on my car keys. Now when I meet people who ask about my crochet, I can tap their phone with my cute pink whale to give them my website 😁.
+searchTerms:
+  - "Plushie"
+  - "Whale"
+  - "Velvet whale"
+date: 2026-07-18
+uploadDate: 2026-08-31
+# instagramLink: ""
+hoursSpent: 0.75
+hookSize: "2mm & 3mm"
+yarn:
+  - "Bohème Velvet Fine - Soft Rose"
+  - "Bohème Velvet Fine - Snow White"
+patterns:
+  - creator: "The Yarn Bowl Crochet"
+    creatorLink: "https://theyarnbowlcrochet.com/"
+    items:
+      - name: "Crochet Whale No Sew Project"
+        link: "https://www.youtube.com/watch?v=PFUbUbzA-EU"
+        platform: youtube
+      - name: "Crochet Whale No Sew Amigurumi (written pattern)"
+        link: "https://theyarnbowlcrochet.com/?p=1468"
+        platform: website
+type: crochet
+subtypes:
+  - amigurumi
+  - keychain
+colors:
+  - pink
+yarnTypes:
+  - chenille
+tags:
+  - whale

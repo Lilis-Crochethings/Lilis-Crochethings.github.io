@@ -15,6 +15,33 @@
    Not usable on ::before/::after pseudo-elements (e.g. the search box's
    native ::-webkit-search-cancel-button) since those can't carry a class —
    those keep their own self-contained rule. */
+/* A drawing (a chart, a diagram) sitting among the photos is line art on a
+   transparent background, and the two things every photo surface does to a
+   picture are wrong for it: a dark theme — or the lightbox's near-black
+   backdrop — leaves nothing to see, and cropping to fill a square tile the
+   way a photo can be cropped cuts the drawing in half. Both are fixed here,
+   once, rather than at each of the places a picture gets shown.
+
+   Deliberately narrow: these three classes/ids are the photo surfaces
+   (gallery tiles and instruction photos, list-tile carousels, the detail
+   pages' lightbox). A blanket img[src$=".svg"] would also hit the site's
+   many svg *icons*, which are meant to be transparent. */
+.gallery-thumb[src$=".svg"],
+.tc-img[src$=".svg"],
+#lightbox-img[src$=".svg"] {
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.gallery-thumb[src$=".svg"],
+.tc-img[src$=".svg"] {
+  padding: 0.4rem;
+}
+
+#lightbox-img[src$=".svg"] {
+  padding: 1.25rem;
+}
+
 .mask-icon {
   mask-repeat: no-repeat;
   mask-position: center;
@@ -675,17 +702,27 @@ mark {
    component's CSS to match only that attribute, but an element created by
    client-side JS after the fact never gets it, so a scoped rule would
    silently never match it at all. */
-/* Exactly overlays the card (not extended past its edges, unlike a
-   top-down effect would need) — every piece starts pinned to this box's
-   own center and radiates outward from there, so the box itself only needs
-   to match the card; overflow: visible is what lets pieces travel past its
-   edges once they're in motion. */
+/* A zero-sized point, fixed to the viewport, that triggerConfetti() places
+   over the row which just completed the pattern — every piece radiates from
+   this box's own center (see .confetti-piece below), so with no width or
+   height that center *is* the point it was placed at.
+
+   Fixed and appended to <body> rather than nested in the row it's centred
+   on: a part card can be thousands of pixels tall on a chart pattern, and
+   living inside page content exposes the burst to any ancestor's overflow
+   and stacking context for no benefit. Positioning it from the row's
+   measured rect keeps the burst where the visitor is looking without that
+   risk.
+
+   z-index sits above the page (and the mini progress bar at 15) but below
+   the lightbox at 2000, which should still cover it if one is open. */
 .confetti-burst {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  width: 0;
+  height: 0;
   overflow: visible;
   pointer-events: none;
-  z-index: 5;
+  z-index: 1500;
 }
 
 .confetti-piece {

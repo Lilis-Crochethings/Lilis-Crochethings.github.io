@@ -29,6 +29,9 @@ patterns:
       - name: "Crochet Whale No Sew Project"
         link: "https://www.youtube.com/watch?v=PFUbUbzA-EU"
         platform: youtube
+      - name: "Crochet Whale No Sew Amigurumi (written pattern)"
+        link: "https://theyarnbowlcrochet.com/?p=1468"
+        platform: website
 type: crochet
 subtypes:
   - amigurumi

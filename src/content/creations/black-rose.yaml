@@ -1,0 +1,48 @@
+title: "Black Rose 🖤🌹"
+difficulty: hard
+images:
+  - "/images/creations/Black-rose-1.webp"
+  - "/images/creations/Black-rose-2.webp"
+  - "/images/creations/Black-rose-3.webp"
+  - "/images/creations/Black-rose-4.webp"
+description: |-
+  I made this rose black since it's my bf's favorite color. Men deserve to receive flowers as well ❤️.
+
+  It sits on a wired stem, so the rose can be bent into whatever pose you like and it never needs water. 🥀
+
+  Black yarn is very hard to photograph though so I had to turn up the brightness to be able to show the flower.
+searchTerms:
+  - "Rose"
+  - "Flower"
+  - "Bouquet"
+  - "Eternal flower"
+date: 2024-06-20
+uploadDate: 2026-08-31
+instagramLink: "https://www.instagram.com/p/DAlIgtxtH1w/"
+facebookLink: "https://www.facebook.com/permalink.php?story_fbid=pfbid07bdJWytPvGo1h933xHuJZzWqwTH7v8rLDshcjAruMpVeu5LczCom5Enh2sZauh5rl&id=61568543484297"
+pinterestLink: "https://www.pinterest.com/pin/1095219203165132226/"
+# hoursSpent: 0
+hookSize: "3mm"
+yarn:
+  - hex: "#1c1c1e"
+    name: "Black"
+    type: "Acrylic"
+  - hex: "#8fae9b"
+    name: "Sage Green"
+    type: "Acrylic"
+patterns:
+  - creator: "Lingzhi Handmade"
+    creatorLink: "https://www.instagram.com/lingzhihandmade/"
+    items:
+      - name: "How to crochet a rose flower"
+        link: "https://www.youtube.com/watch?v=mmzbHbLcUPs"
+        platform: youtube
+type: crochet
+subtypes:
+  - flower
+colors:
+  - black
+  - green
+yarnTypes:
+  - acrylic
+# tags:

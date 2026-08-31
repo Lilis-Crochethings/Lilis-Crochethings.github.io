@@ -1,0 +1,73 @@
+# One catalog for every stitch a pattern's key can reference — the merge of
+# what used to be abbreviations.yaml and symbols.yaml. Most stitches have
+# both a shorthand and a drawn symbol, and keeping them in two files meant
+# one stitch spread across two entries with two different ids, two labels to
+# keep in step, and no way to say "this is the same stitch".
+#
+# `id` doubles as the abbreviation itself (shown uppercased, so `sc` reads as
+# "SC:"). Everything else is optional, because a stitch can legitimately have
+# only one half: `()` is shorthand with nothing to draw, and a chart could
+# just as easily draw something no written pattern ever abbreviates.
+#
+# A pattern still lists `symbols` and `abbreviations` separately, both by the
+# ids below — a chart pattern may want a stitch in its symbol key without
+# repeating it in the abbreviation list, or the reverse. Listing an id under
+# `symbols` when it has no `image` is a build error.
+#
+# `image` is a monochrome SVG in public/images/patterns/symbols/, drawn in
+# solid black on transparent: symbols render as CSS masks (like every other
+# icon on this site), so they take the site's primary colour and stay legible
+# in dark mode. Only the shape matters, not the colour it was drawn in.
+#
+# `size` is how many pixels wide/tall to draw the symbol in a key. Symbols
+# don't fill their canvas equally — a chain is a wide flat oval, a single
+# crochet a compact cross — so one shared box would leave some of them tiny
+# and others crowding their row. Omit it for the 26px default.
+#
+# `info` explains how the stitch is actually worked, for a visitor who knows
+# the name but not the technique. It's revealed by an info icon beside the
+# stitch rather than shown outright — see StitchInfo.astro.
+stitches:
+  - id: mr
+    label: magic ring
+    image: /images/patterns/symbols/magic-ring.svg
+    size: 22
+  - id: ch
+    label: chain
+    image: /images/patterns/symbols/chain.svg
+    size: 18
+  - id: slst
+    label: slip stitch
+    image: /images/patterns/symbols/slip-stitch.svg
+    size: 10
+  - id: sc
+    label: single crochet
+    image: /images/patterns/symbols/single-crochet.svg
+    size: 14
+  - id: hdc
+    label: half double crochet
+    image: /images/patterns/symbols/half-double-crochet.svg
+    size: 30
+  - id: dc
+    label: double crochet
+    image: /images/patterns/symbols/double-crochet.svg
+    size: 30
+  - id: puff
+    label: puff stitch
+    info: You start with 1 loop on your hook. You yarn over, insert your hook into the stitch, yarn over and pull up a loop. You now have 3 loops on your hook. You repeat this another 3 times to end up with a total of 9 loops on your hook. Then you yarn over again and pull through all 9 loops. Then you yarn over again and chain those 9 stitches together. You now have a puff stitch!
+    image: /images/patterns/symbols/puff-stitch.svg
+    size: 28
+  - id: inc
+    label: increase
+  - id: dec
+    label: decrease
+  - id: flo
+    label: front loops only
+  - id: blo
+    label: back loops only
+  - id: tw
+    label: turn your work
+  - id: '()'
+    label: repeat pattern
+  - id: '[]'
+    label: in the same stitch

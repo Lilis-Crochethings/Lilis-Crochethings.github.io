@@ -20,6 +20,8 @@ const taxonomy = taxonomyEntry.data.tags;
 const typesEntry = (await getCollection("types"))[0];
 const typesTaxonomy = typesEntry.data.types;
 
+const patternFormats = (await getCollection("patternFormats"))[0].data.patternFormats;
+
 const pagesEntry = (await getCollection("pages"))[0];
 const pageMeta = pagesEntry.data.patterns;
 
@@ -117,6 +119,17 @@ const patternsWithTags = patterns.map((pattern) => ({
           <div class="filters-heading-row">
             <h2>Filters</h2>
             <button type="button" id="reset-filters" class="reset-filters">Reset</button>
+          </div>
+
+          <h3 class="filter-subheading">Format</h3>
+          <div class="difficulty-options">
+            {patternFormats.map((format) => (
+              <label class="taxonomy-item">
+                <input type="checkbox" value={format.id} class="format-filter" data-icon={format.icon} data-label={format.label} />
+                {format.label}
+                <span class="filter-count"></span>
+              </label>
+            ))}
           </div>
 
           <h3 class="filter-subheading">Difficulty</h3>
@@ -869,10 +882,12 @@ const patternsWithTags = patterns.map((pattern) => ({
 
   const DIFFICULTY_KEY = 'patterns-difficulty-filters';
   const TYPE_KEY = 'patterns-type-filters';
+  const FORMAT_KEY = 'patterns-format-filters';
 
   const tagCheckboxes = document.querySelectorAll<HTMLInputElement>('.tag-filter');
   const difficultyCheckboxes = document.querySelectorAll<HTMLInputElement>('.difficulty-filter');
   const typeCheckboxes = document.querySelectorAll<HTMLInputElement>('.type-filter');
+  const formatCheckboxes = document.querySelectorAll<HTMLInputElement>('.format-filter');
   const filtersToggle = document.getElementById('filters-toggle');
   const filtersPanel = document.getElementById('filters-panel');
   const closeFilters = document.getElementById('close-filters');
@@ -895,6 +910,11 @@ const patternsWithTags = patterns.map((pattern) => ({
     sessionStorage.setItem(TYPE_KEY, JSON.stringify(selected));
   }
 
+  function saveFormatFilters() {
+    const selected = Array.from(formatCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
+    sessionStorage.setItem(FORMAT_KEY, JSON.stringify(selected));
+  }
+
   function applyFilters() {
     // See creations/index.astro's identical rule for why scrollY is
     // snapshotted/restored around every mutation here.
@@ -904,7 +924,8 @@ const patternsWithTags = patterns.map((pattern) => ({
     const selectedTags = Array.from(tagCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
     const selectedDifficulties = Array.from(difficultyCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
     const selectedTypes = Array.from(typeCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
-    filtersToggle?.classList.toggle('active', selectedTags.length > 0 || selectedDifficulties.length > 0 || selectedTypes.length > 0);
+    const selectedFormats = Array.from(formatCheckboxes).filter((cb) => cb.checked).map((cb) => cb.value);
+    filtersToggle?.classList.toggle('active', selectedTags.length > 0 || selectedDifficulties.length > 0 || selectedTypes.length > 0 || selectedFormats.length > 0);
     const items = listView ? Array.from(listView.querySelectorAll<HTMLElement>(':scope > .list-item-wrap')) : [];
     let visibleCount = 0;
     for (const item of items) {
@@ -913,13 +934,14 @@ const patternsWithTags = patterns.map((pattern) => ({
       const tagsMatch = selectedTags.length === 0 || selectedTags.some((tag) => itemTags.includes(tag));
       const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(item.dataset.difficulty ?? '');
       const typeMatch = selectedTypes.length === 0 || selectedTypes.some((type) => itemTypes.includes(type));
-      const visible = tagsMatch && difficultyMatch && typeMatch;
+      const formatMatch = selectedFormats.length === 0 || selectedFormats.includes(item.dataset.format ?? '');
+      const visible = tagsMatch && difficultyMatch && typeMatch && formatMatch;
       item.style.display = visible ? '' : 'none';
       if (visible) visibleCount++;
     }
     if (noResults) noResults.hidden = visibleCount > 0;
     if (resultsCount) resultsCount.textContent = `Showing ${visibleCount} of ${items.length} patterns`;
-    updateFilterCounts(items, selectedTags, selectedDifficulties, selectedTypes);
+    updateFilterCounts(items, selectedTags, selectedDifficulties, selectedTypes, selectedFormats);
     renderActiveFilters();
 
     window.scrollTo(scrollX, scrollY);
@@ -931,13 +953,22 @@ const patternsWithTags = patterns.map((pattern) => ({
     items: HTMLElement[],
     selectedTags: string[],
     selectedDifficulties: string[],
-    selectedTypes: string[]
+    selectedTypes: string[],
+    selectedFormats: string[]
   ) {
     const itemData = items.map((item) => ({
       tags: (item.dataset.tags ?? '').split(' ').filter(Boolean),
       types: (item.dataset.type ?? '').split(' ').filter(Boolean),
       difficulty: item.dataset.difficulty ?? '',
+      format: item.dataset.format ?? '',
     }));
+
+    // Every section below counts against the *other* sections' selections
+    // but not its own, so an option always shows what checking it would
+    // add — hence one of these per section rather than a single shared
+    // predicate.
+    const matchesFormat = (d: typeof itemData[number]) =>
+      selectedFormats.length === 0 || selectedFormats.includes(d.format);
 
     // Hides an option outright once it can't possibly add anything to the
     // current results (0 matches) — unless it's the one currently checked,
@@ -969,11 +1000,21 @@ const patternsWithTags = patterns.map((pattern) => ({
       }
     }
 
+    formatCheckboxes.forEach((cb) => {
+      const count = itemData.filter((d) => {
+        const tagsMatch = selectedTags.length === 0 || selectedTags.some((t) => d.tags.includes(t));
+        const typeMatch = selectedTypes.length === 0 || selectedTypes.some((t) => d.types.includes(t));
+        const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(d.difficulty);
+        return d.format === cb.value && tagsMatch && typeMatch && difficultyMatch;
+      }).length;
+      setCount(cb, count);
+    });
+
     difficultyCheckboxes.forEach((cb) => {
       const count = itemData.filter((d) => {
         const tagsMatch = selectedTags.length === 0 || selectedTags.some((t) => d.tags.includes(t));
         const typeMatch = selectedTypes.length === 0 || selectedTypes.some((t) => d.types.includes(t));
-        return d.difficulty === cb.value && tagsMatch && typeMatch;
+        return d.difficulty === cb.value && tagsMatch && typeMatch && matchesFormat(d);
       }).length;
       setCount(cb, count);
     });
@@ -982,7 +1023,7 @@ const patternsWithTags = patterns.map((pattern) => ({
       const count = itemData.filter((d) => {
         const tagsMatch = selectedTags.length === 0 || selectedTags.some((t) => d.tags.includes(t));
         const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(d.difficulty);
-        return d.types.includes(cb.value) && tagsMatch && difficultyMatch;
+        return d.types.includes(cb.value) && tagsMatch && difficultyMatch && matchesFormat(d);
       }).length;
       setCount(cb, count);
     });
@@ -991,7 +1032,7 @@ const patternsWithTags = patterns.map((pattern) => ({
       const count = itemData.filter((d) => {
         const typeMatch = selectedTypes.length === 0 || selectedTypes.some((t) => d.types.includes(t));
         const difficultyMatch = selectedDifficulties.length === 0 || selectedDifficulties.includes(d.difficulty);
-        return d.tags.includes(cb.value) && typeMatch && difficultyMatch;
+        return d.tags.includes(cb.value) && typeMatch && difficultyMatch && matchesFormat(d);
       }).length;
       setCount(cb, count);
     });
@@ -1054,6 +1095,7 @@ const patternsWithTags = patterns.map((pattern) => ({
     if (!activeFiltersRow) return;
     activeFiltersRow.innerHTML = '';
     const checked = [
+      ...Array.from(formatCheckboxes),
       ...Array.from(difficultyCheckboxes),
       ...Array.from(typeCheckboxes),
       ...Array.from(tagCheckboxes),
@@ -1102,13 +1144,22 @@ const patternsWithTags = patterns.map((pattern) => ({
     });
   });
 
+  formatCheckboxes.forEach((cb) => {
+    cb.addEventListener('change', () => {
+      saveFormatFilters();
+      applyFilters();
+    });
+  });
+
   document.getElementById('reset-filters')?.addEventListener('click', () => {
     tagCheckboxes.forEach((cb) => { cb.checked = false; });
     difficultyCheckboxes.forEach((cb) => { cb.checked = false; });
     typeCheckboxes.forEach((cb) => { cb.checked = false; });
+    formatCheckboxes.forEach((cb) => { cb.checked = false; });
     saveFilters();
     saveDifficultyFilters();
     saveTypeFilters();
+    saveFormatFilters();
     applyFilters();
   });
 
@@ -1136,6 +1187,7 @@ const patternsWithTags = patterns.map((pattern) => ({
   const savedFilters = sessionStorage.getItem(FILTERS_KEY);
   const savedDifficultyFilters = sessionStorage.getItem(DIFFICULTY_KEY);
   const savedTypeFilters = sessionStorage.getItem(TYPE_KEY);
+  const savedFormatFilters = sessionStorage.getItem(FORMAT_KEY);
 
   if (savedFilters) {
     const selected: string[] = JSON.parse(savedFilters);
@@ -1154,6 +1206,13 @@ const patternsWithTags = patterns.map((pattern) => ({
   if (savedTypeFilters) {
     const selected: string[] = JSON.parse(savedTypeFilters);
     typeCheckboxes.forEach((cb) => {
+      cb.checked = selected.includes(cb.value);
+    });
+  }
+
+  if (savedFormatFilters) {
+    const selected: string[] = JSON.parse(savedFormatFilters);
+    formatCheckboxes.forEach((cb) => {
       cb.checked = selected.includes(cb.value);
     });
   }

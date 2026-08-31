@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Double crochet: the half-double's long T with one diagonal struck
+     through the body of the stem. Each further diagonal is the next stitch
+     up the family (treble, double treble), so this file and
+     half-double-crochet.svg deliberately share their T exactly — only the
+     diagonal tells them apart. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <g fill="none" stroke="#000000" stroke-width="20" stroke-linecap="round">
+    <path d="M100 20 V180" />
+    <path d="M55 20 H145" />
+    <path d="M132 92 L68 56" />
+  </g>
+</svg>

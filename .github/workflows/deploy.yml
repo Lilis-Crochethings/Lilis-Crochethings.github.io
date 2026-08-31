@@ -3,6 +3,14 @@ name: Deploy Astro to GitHub Pages
 on:
   push:
     branches: [main]
+  # The "New" badge and the home page's highlight cards are decided by
+  # comparing each item's uploadDate against "now" at build time (see
+  # src/lib/newBadge.ts) — on a static site there's no server to re-check
+  # that per visitor, so without a rebuild a badge stays lit until the next
+  # push. This nightly run keeps both at most a day stale. 04:00 UTC is
+  # ~06:00 local, so the site is correct before anyone's looking.
+  schedule:
+    - cron: "0 4 * * *"
 
 permissions:
   contents: read

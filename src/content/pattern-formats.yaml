@@ -1,0 +1,27 @@
+# How a pattern is actually written down — the shape of its instructions,
+# not what it makes (that's types.yaml) or what it's of (tags.yaml). Read
+# synchronously by content.config.ts to back a Zod enum, same as
+# tags/types/colors/materials, so a typo'd format id is a build error.
+#
+# A pattern that sets no `format` defaults to "written".
+patternFormats:
+  - id: written
+    label: Written
+    icon: /images/icons/pattern.svg
+    # Shown under the Format filter heading and in the detail page's Info
+    # card, where "Written" on its own reads ambiguously next to a craft
+    # type — this spells out what the reader actually gets.
+    description: Round-by-round written instructions.
+  - id: chart
+    label: Chart
+    # The double crochet stitch symbol, straight from the shared symbol
+    # library (symbols.yaml) rather than a separate drawing — a chart pattern
+    # is the one that speaks in symbols, so the filter and the Info card are
+    # labelled with an actual one. Redrawing that symbol changes this icon
+    # too, which is the intent.
+    icon: /images/patterns/symbols/double-crochet.svg
+    description: A stitch-symbol chart you work from, with written instructions per round.
+  - id: pixel
+    label: Pixel
+    icon: /images/icons/pixel.svg
+    description: A colour grid, worked as pixel crochet or as embroidery.

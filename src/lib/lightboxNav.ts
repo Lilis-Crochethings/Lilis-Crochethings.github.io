@@ -10,6 +10,16 @@ import { slideImage } from "./imageSlide";
 export interface LightboxItem {
   src: string;
   alt: string;
+  /**
+   * An already-rendered element to show instead of loading `src` — used for
+   * the pattern pages' inline stitch charts, which aren't files at all (see
+   * lib/patternChart.ts: one shared drawing, referenced by every copy, with
+   * the round it emphasizes carried in inline custom properties). Returns a
+   * fresh node per call so the lightbox's copy is independent of the one on
+   * the page. Items in a single lightbox are all-node or all-image; a mixed
+   * list isn't supported, and nothing needs it.
+   */
+  node?: () => Node;
 }
 
 export interface LightboxNavRefs {
@@ -70,6 +80,17 @@ export function initLightboxNav(refs: LightboxNavRefs): LightboxNavController {
     const nextIndex = (newIndex + refs.items.length) % refs.items.length;
     const item = refs.items[nextIndex];
     if (!item) return;
+
+    // Nothing to fetch, decode, cache or wait for — so none of the machinery
+    // below (which exists entirely to hide network latency behind a spinner
+    // and a slide) has anything to do. Swapping the node straight in is both
+    // simpler and, with no load to cover, indistinguishable from it.
+    if (item.node) {
+      refs.frame.replaceChildren(item.node());
+      index = nextIndex;
+      refs.onChange?.(index);
+      return;
+    }
 
     const cached = ensureCached(item.src);
     // A prior prefetch (or an earlier visit to this same photo) may already

@@ -1,0 +1,49 @@
+title: "Turtle 🐢"
+difficulty: medium
+images:
+  - "/images/creations/Turtle-1.webp"
+  - "/images/creations/Turtle-2.webp"
+  - "/images/creations/Turtle-3.webp"
+  - "/images/creations/Turtle-4.webp"
+description: |-
+  This was the first turtle pattern that I followed and it turned out so cute! And it's also so easy to make!
+searchTerms:
+  - "Plushie"
+  - "Sea turtle"
+  - "Tortoise"
+date: 2024-01-09
+uploadDate: 2026-08-31
+instagramLink: "https://www.instagram.com/p/DAi-5U0NNKO/"
+facebookLink: "https://www.facebook.com/permalink.php?story_fbid=pfbid0CAgQ26GWv2eTr92UwVs6cuouwjiEKDuSpbXNGt8ttLi5R9NzEoCRtVEvQtohiYRtl&id=61568543484297"
+pinterestLink: "https://www.pinterest.com/pin/1095219203165131786/"
+# hoursSpent: 0
+hookSize: "4mm"
+yarn:
+  # Also Veritas, but the exact colourway is unknown - hex approximated from
+  # the flat-lay photo, so nudge it if it reads wrong against the real skein.
+  - hex: "#8b9bc4"
+    name: "Blue"
+    type: "Chenille"
+    description: "Veritas - exact colourway unknown"
+  - "Dolce - Rust"
+patterns:
+  - creator: "Rose & Lily Amigurumi"
+    creatorLink: "https://www.roseandlilyamigurumi.com/"
+    items:
+      - name: "Easy Crochet Turtle - Part 1"
+        link: "https://www.youtube.com/watch?v=o_rsQnKVCEw"
+        platform: youtube
+      - name: "Easy Crochet Turtle - Part 2"
+        link: "https://www.youtube.com/watch?v=Rzn57LxPYgE"
+        platform: youtube
+type: crochet
+subtypes:
+  - amigurumi
+colors:
+  - blue
+  - brown
+  - orange
+yarnTypes:
+  - chenille
+tags:
+  - turtle
