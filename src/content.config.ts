@@ -622,6 +622,13 @@ const patternChart = z.object({
   // Note it is NOT what tells a chart section from a written one — `file`
   // is, since this can be absent. See patternSection.
   chart: z.string().optional(),
+  // Default color for every step (and part) in this chart that doesn't set
+  // its own — the counterpart to a written part's own `color:`. Point it at
+  // the yarn most of the chart is worked in (`color: *blackText`) and every
+  // line becomes that yarn's, so a visitor's color pick repaints the
+  // instructions as well as the drawing; a round worked in the other yarn
+  // just sets its own `color:` and overrides this.
+  color: themedColor.optional(),
   file: z.string(),
   // Whether this chart's steps are rounds or rows. Omitted entirely for a
   // chart whose steps aren't numbered at all (each step then needs its own
