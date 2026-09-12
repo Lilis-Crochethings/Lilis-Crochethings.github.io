@@ -7,12 +7,22 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  /**
+   * Keeps this page out of search engines. Set by an unlisted pattern (see
+   * lib/hiddenPatterns.ts): dropping it from the sitemap stops it being
+   * *offered* to a crawler, but not being indexed if one reaches the URL
+   * some other way — someone sharing the link publicly, say. "follow" so
+   * the links out of it still count normally; it's the page that's
+   * unlisted, not the pages it points at.
+   */
+  noindex?: boolean;
 }
 
 const {
   title = "Lili's Crochethings",
   description = "Handmade crochet creations and free patterns by Lili — browse finished pieces and interactive patterns for your next project.",
   image = "/images/Lilis-Crochethings.webp",
+  noindex = false,
 } = Astro.props;
 
 const pageTitle = title === "Lili's Crochethings" ? title : `${title} — Lili's Crochethings`;
@@ -89,6 +99,7 @@ const organizationSchema = {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href={canonicalURL} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
 

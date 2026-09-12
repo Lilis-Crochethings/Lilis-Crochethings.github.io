@@ -12,6 +12,14 @@ const { segments, spaced = false } = Astro.props as { segments: RenderSegment[];
 {segments.map((segment, i) => (
   <>
     {spaced && i > 0 && " "}
+    {segment.href ? (
+      /* A reference to another round/step (see resolveStepReferences in
+         lib/patternInstructions.ts). A real anchor, so it works before the
+         page's JS runs and can be opened in a new tab like any link — the
+         smooth scroll and the flash on arrival are an enhancement on top,
+         added by PatternInstructions.astro's own script. */
+      <a class="step-ref" href={segment.href}>{segment.text}</a>
+    ) : (
     <span
       class="segment"
       data-colored={segment.color ? "true" : undefined}
@@ -21,6 +29,7 @@ const { segments, spaced = false } = Astro.props as { segments: RenderSegment[];
       data-default-name={segment.isYarnName ? segment.text : undefined}
       style={segment.color ? `--segment-color-light: ${segment.color.light}; --segment-color-dark: ${segment.color.dark}` : undefined}
     >{segment.text}</span>
+    )}
   </>
 ))}
 
@@ -53,6 +62,30 @@ const { segments, spaced = false } = Astro.props as { segments: RenderSegment[];
 
 .segment[data-colored="true"] {
   font-weight: 600;
+}
+
+/* Underlined always: this sits inside a sentence, and the site's rule is
+   that body-text links are underlined while standalone ones only underline
+   on hover. --primary rather than the yarn colors around it, so a reference
+   reads as "somewhere to go" and not as another color-coded stitch. */
+.step-ref {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: var(--cursor-pointer);
+}
+
+.step-ref:hover {
+  opacity: 0.8;
+}
+
+/* A done row greys its own text out; a reference inside one has to follow,
+   or it stays lit up on a row that's finished. Same rule as .segment's. */
+:global(.row-line.done) .step-ref,
+:global(.row-block.done) .row-summary .step-ref {
+  color: var(--muted-text);
+  font-weight: normal;
 }
 
 /* .row-line/.row-block are PatternInstructions.astro's own classes, not

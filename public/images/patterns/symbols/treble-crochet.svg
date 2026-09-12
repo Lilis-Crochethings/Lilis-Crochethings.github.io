@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Treble crochet: the double crochet's T with a second diagonal struck
+     through the stem — one diagonal per extra yarn-over, which is exactly
+     how the family reads on a chart. Shares its T with
+     half-double-crochet.svg and double-crochet.svg on purpose; only the
+     diagonals tell the three apart. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <g fill="none" stroke="#000000" stroke-width="20" stroke-linecap="round">
+    <path d="M100 20 V180" />
+    <path d="M55 20 H145" />
+    <path d="M132 84 L68 48" />
+    <path d="M132 124 L68 88" />
+  </g>
+</svg>

@@ -1,8 +1,9 @@
 title: "Puff Stitch Coaster"
 images:
-  - /images/patterns/puff-stitch-coaster/chart.svg
+  # - /images/patterns/puff-stitch-coaster/chart.svg
   - "/images/creations/Coasters-1.webp"
   - "/images/creations/Coasters-2.webp"
+  - "/images/creations/Coasters-side-by-side.webp"
 description: |-
   I designed this puff stitch coaster pattern especially with gradient yarn in mind. It works in alternating rounds, which not only helps the colors flow beautifully but also naturally gives the coaster a more rounded, circular shape as you work.
 
@@ -41,7 +42,9 @@ abbreviations:
   - puff
   - ()
 
-charts:
+# One ordered list of sections: chart sections and written parts mix
+# freely, and render as cards in exactly the order written here.
+pattern:
   # Top-level layers named step-1, step-2, ... in the drawing become the
   # steps below, in order (round-N works too, which is what this file's own
   # chart is drawn with). The build fails if the two ever stop lining up.
@@ -64,3 +67,8 @@ charts:
       - line: "64 SC"
         total: 64
         info: Single crochet around in both the puff stitched and the ch-1 gaps to create a neatly finished border for the coaster. Slip stitch to join the round, or make an invisible join. Cut the yarn and weave in the ends
+
+outro:
+  - text: Congratulations on finishing your puff stitch coaster! Now you'll always have a pretty spot to put your beverages!
+  - images:
+    - /images/creations/Coasters-1.webp

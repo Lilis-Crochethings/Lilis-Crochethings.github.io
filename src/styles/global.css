@@ -38,8 +38,23 @@
   padding: 0.4rem;
 }
 
+/* Opened big, a drawing should fill the space the way a photo does. It
+   doesn't by default: an <img> is never scaled past its intrinsic size, and
+   where a photo's is ~1600px (so the frame's own max-width always clamps it
+   down to fit), a chart exported from Inkscape carries the millimetre size
+   it was drawn at — around 1000px — and simply stops there, short of the
+   frame, however much room is going spare.
+
+   Asking for a width far larger than any viewport hands the fitting back to
+   the frame's own max-width/max-height, which each page sets for itself
+   (and changes at mobile). Those clamp a replaced element proportionally,
+   so this scales up to the box and keeps its shape — which is the whole
+   point for art that's the wrong shape for a square frame. Free to do: line
+   art is vector, so there's no resolution to run out of. */
 #lightbox-img[src$=".svg"] {
   padding: 1.25rem;
+  width: 100vw;
+  height: auto;
 }
 
 .mask-icon {

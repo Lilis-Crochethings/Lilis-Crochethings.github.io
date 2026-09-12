@@ -3,12 +3,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import PatternListItem from '../../components/patterns/PatternListItem.astro';
 import { getCollection } from "astro:content";
 import { getEffectiveTags } from "../../lib/tags";
+import { listedPatterns } from "../../lib/hiddenPatterns";
 import { DIFFICULTY_LEVELS, DIFFICULTY_LABELS, DIFFICULTY_DOT_COLORS } from "../../lib/difficulty";
 
 // Same tiebreak-by-title reasoning as creations/index.astro — keeps the
 // initial server-rendered order deterministic and matching the client-side
 // sort's own tiebreak (see the <script> below).
-const patterns = (await getCollection("patterns")).sort((a, b) => {
+const patterns = listedPatterns(await getCollection("patterns")).sort((a, b) => {
   const dateDiff = (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0);
   if (dateDiff !== 0) return dateDiff;
   return a.data.title.localeCompare(b.data.title, undefined, { sensitivity: "base" });

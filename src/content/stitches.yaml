@@ -47,11 +47,15 @@ stitches:
   - id: hdc
     label: half double crochet
     image: /images/patterns/symbols/half-double-crochet.svg
-    size: 30
+    size: 25
   - id: dc
     label: double crochet
     image: /images/patterns/symbols/double-crochet.svg
-    size: 30
+    size: 25
+  - id: tr
+    label: treble crochet
+    image: /images/patterns/symbols/treble-crochet.svg
+    size: 25
   - id: puff
     label: puff stitch
     info: You start with 1 loop on your hook. You yarn over, insert your hook into the stitch, yarn over and pull up a loop. You now have 3 loops on your hook. You repeat this another 3 times to end up with a total of 9 loops on your hook. Then you yarn over again and pull through all 9 loops. Then you yarn over again and chain those 9 stitches together. You now have a puff stitch!

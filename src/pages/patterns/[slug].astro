@@ -18,6 +18,7 @@ import { getEffectiveTags, getCreationAlt, getTagLabel } from "../../lib/tags";
 import { formatHours } from "../../lib/time";
 import { YARN_WEIGHT_LABELS } from "../../lib/yarnWeight";
 import { resolveYarn } from "../../lib/yarn";
+import { listedPatterns } from "../../lib/hiddenPatterns";
 import { socialImage } from "../../lib/images";
 import { seededShuffle } from "../../lib/seededShuffle";
 
@@ -46,7 +47,10 @@ export async function getStaticPaths() {
       .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0))
       .slice(0, USED_IN_LIMIT);
 
-    const others = patterns.filter((p) => p.id !== pattern.id);
+    // getStaticPaths above deliberately keeps building hidden patterns —
+    // that's the whole point of the flag — but one must never be *suggested*
+    // from another pattern's page, which would lead straight to it.
+    const others = listedPatterns(patterns).filter((p) => p.id !== pattern.id);
 
     // Same scoring idea as the creations detail page's own "See also" card:
     // tags + subtypes count together (the type itself, "crochet"/
@@ -56,6 +60,15 @@ export async function getStaticPaths() {
     // doesn't lose to a partially-matching large one. No creator/pattern-name
     // bonus here (unlike creations) — every entry in this collection is
     // already Lili's own pattern, so that signal has nothing to distinguish.
+    //
+    // Format (chart/written/pixel) is the one signal patterns have that
+    // creations don't, and it's a real preference: someone who has just
+    // worked a chart is far more likely to want another chart than the
+    // subject-matter tags alone would suggest. Weighted below a single
+    // shared tag on purpose — another duck should still beat a same-format
+    // stranger — but it's what breaks the tie when two patterns have no
+    // subject in common at all, which is otherwise a coin flip.
+    const FORMAT_MATCH_WEIGHT = 0.75;
     const ownTags = new Set([...(pattern.data.tags ?? []), ...(pattern.data.subtypes ?? [])]);
     const ownColors = new Set(pattern.data.colors ?? []);
 
@@ -69,6 +82,8 @@ export async function getStaticPaths() {
       const sharedColors = otherColors.filter((color) => ownColors.has(color)).length;
       const unionColors = new Set([...ownColors, ...otherColors]).size;
       if (unionColors > 0) score += sharedColors / unionColors;
+
+      if (other.data.format === pattern.data.format) score += FORMAT_MATCH_WEIGHT;
 
       return score;
     }
@@ -102,7 +117,13 @@ const patternAlt = getCreationAlt(data.title, data.type, data.subtypes, typesTax
 const materialsEntry = (await getCollection("materials"))[0];
 const materialsCatalog = materialsEntry.data.materials;
 const materialTiles = (data.materials?.items ?? [])
-  .map((id) => materialsCatalog.find((material) => material.id === id))
+  .map((entry) => {
+    // Either a bare catalog id or `{ id, detail }` — see the materials
+    // schema. `detail` becomes the tile's second line.
+    const id = typeof entry === "string" ? entry : entry.id;
+    const found = materialsCatalog.find((material) => material.id === id);
+    return found && { ...found, detail: typeof entry === "string" ? undefined : entry.detail };
+  })
   .filter((material) => material !== undefined);
 const patternYarns = data.materials?.yarns ?? [];
 const patternSafetyEyes = data.materials?.safetyEyes ?? [];
@@ -188,14 +209,14 @@ const keyLabel =
 // checkable rows, and feed the same progress bar — so everything gated on
 // this (the Progress card, the abbreviations drawer, the sticky column)
 // applies to a chart pattern exactly as it does to a written one.
-const hasPatternInstructions = Boolean(
-  (data.pattern && data.pattern.length > 0) || (data.charts && data.charts.length > 0)
-);
+const hasPatternInstructions = (data.pattern ?? []).length > 0;
 
 const patternFormat = (await getCollection("patternFormats"))[0].data.patternFormats
   .find((format) => format.id === data.format)!;
 
-const hasCharts = (data.charts ?? []).length > 0;
+// Gates the symbol half of the key — a chart section is one with a `file`
+// (see patternSection in content.config.ts).
+const hasCharts = (data.pattern ?? []).some((section) => "file" in section);
 
 const infoItems = [
   // First line of the card: what shape the instructions come in is the thing
@@ -280,6 +301,7 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
   title={pageTitle}
   description={pageDescription}
   image={socialImage(data.images)}
+  noindex={data.hidden}
 >
   <script type="application/ld+json" is:inline set:html={JSON.stringify(creativeWorkSchema)} />
   <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbSchema)} />
@@ -319,6 +341,7 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
                 </span>
                 <span class="material-info">
                   <span class="material-label">{material.label}</span>
+                  {material.detail && <span class="material-sublabel">{material.detail}</span>}
                 </span>
               </div>
             ))}
@@ -944,10 +967,17 @@ const pageTitle = data.searchTerms?.length ? `${data.title} (${data.searchTerms[
 /* Id-scoped on purpose: .chart-svg's own rules come from
    PatternInstructions.astro, and its scoping attribute rides along on the
    clone, so a plain class selector here would only tie with them. */
+/* Sized against whichever dimension actually runs out first, using the
+   drawing's own proportions (--chart-aspect, set from its viewBox by
+   PatternInstructions.astro and carried along on the clone). A square chart
+   is limited by the viewport's height and a wide one by its width, and
+   guessing wrong wastes a lot of room: the eye mask is nearly 2:1, so the
+   old height-derived cap opened it at barely half the width available to
+   it. Falls back to 1 (square, the previous behaviour) if ever unset. */
 #chart-lightbox-frame :global(.chart-svg) {
   --chart-ink: #1b1b1b;
   --chart-paper: #ffffff;
-  width: min(80vw, 78vh);
+  width: min(80vw, calc(82vh * var(--chart-aspect, 1)));
   max-width: 80vw;
   max-height: 82vh;
   height: auto;
@@ -1416,7 +1446,7 @@ a.yarn-material-tile:hover {
   /* Matches the photo's own widening just above — with the overlay's padding
      down to 0.5rem there's no reason for a chart to hold back at 80vw. */
   #chart-lightbox-frame :global(.chart-svg) {
-    width: min(92vw, 78vh);
+    width: min(92vw, calc(82vh * var(--chart-aspect, 1)));
     max-width: 92vw;
   }
 

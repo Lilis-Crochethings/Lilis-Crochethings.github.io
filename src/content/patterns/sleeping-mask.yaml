@@ -1,0 +1,263 @@
+title: "Sleeping Mask"
+images:
+  # Photos first, chart last: og:image skips SVGs and falls back to the first
+  # real photo (socialImage() in lib/images.ts), and the first image is also
+  # the cover on list tiles.
+  - /images/creations/Sleeping-mask-1.webp
+  - /images/creations/Sleeping-mask-2.webp
+  - /images/creations/Sleeping-mask-3.webp
+  # - /images/patterns/sleeping-mask/chart.svg
+
+description: |-
+  I actually came up with this pattern when I was sick and wanted to sleep on the sofa. But we didn't have any curtains at the time, so it was really bright in the living room area during the day. I really needed to rest, so I decided to crochet myself a sleeping mask. And if I do say so myself: mission accomplished 😎.
+
+  You start by making the right eye patch, then the left. Then you join the two and work around them to shape the mask. The ruffled edge comes last, worked in a finer yarn as a finishing touch, and you can use any band you like for the strap.
+
+  I've tried to make the pattern as clear as possible. If you run into any issues, don't hesitate to [contact me](/contact)!
+
+difficulty: medium
+date: 2026-09-12
+uploadDate: 2026-09-12
+# lastModified: yyyy-mm-dd
+# hoursSpent: 0
+hookSize: 4mm & 2mm
+type: crochet
+format: chart
+# Unlisted while the instructions are still being written — the page works
+# at /patterns/sleeping-mask, but nothing on the site links to it.
+hidden: true
+subtypes:
+  # Nothing better fits a sleeping mask in types.yaml yet — see the note in
+  # my summary about adding an "accessory" subtype under crochet.
+  - misc
+colors:
+  - black
+  - pink
+
+materials:
+  items:
+    - scissors
+    - needle
+    - stitch-marker
+    # `detail` adds a second line to the tile — the catalog just says
+    # "Elastic thread", since the thickness is this pattern's to state.
+    - id: elastic-thread
+      detail: 2mm
+  # One tile each. 4mm for the mask, 2mm for the much finer ruffle yarn —
+  # check that's the right way round before this goes live.
+  hooks:
+    - 4mm
+    - 2mm
+  yarns:
+    - id: black
+      info: Color that is used for the mask itself
+      name: "black"
+      yarn: "Honey Bunny - Black"
+      color: &blackText
+        light: "#2b2b2b"
+        dark: "#f2e7ea"
+      weight: super-bulky
+      # amount: 0g
+
+    - id: pink
+      info: Color that is used for the ruffled edge
+      name: "pink"
+      yarn: "Bohème Velvet Fine - Raspberry"
+      color: &pinkText
+        light: "#8f4256"
+        dark: "#e4899f"
+      # amount: 0g
+
+symbols:
+  - mr
+  - ch
+  - sc
+  - slst
+  - hdc
+  - dc
+  - tr
+
+abbreviations:
+  - mr
+  - ch
+  - sc
+  - inc
+  - dec
+  - slst
+  - hdc
+  - dc
+  - tr
+  - "()"
+  - "[]"
+
+# One ordered list of sections: chart sections and written parts mix
+# freely, and render as cards in exactly the order written here.
+pattern:
+  - chart: Mask
+    file: /images/patterns/sleeping-mask/chart.svg
+    info: For the sleeping mask I used a bulky chenille yarn with a 4mm crochet hook. We start with the first three rounds of the right side of the mask and finish off. Then we start the left side without finishing off, connect both sides with 4 chains, and continue around the mask. For the ruffles, I used a fine yarn and a 2mm hook, working 3 double crochets in each stitch around the mask. The pattern is read counterclockwise.
+    worked-in: rounds
+    # info: TODO — the note shown above the steps.
+
+    # Which of the drawing's own colors a visitor can repaint from the
+    # Settings card, and as which yarn. Every hex listed has to actually
+    # appear as a fill/stroke in the SVG or the build fails, so a re-export
+    # from Inkscape that shifts a color can't silently break this.
+    #
+    # Both hexes under `pink` are the same yarn: Inkscape left the ruffle's
+    # fill and stroke a few digits apart. Black stays theme-aware ink until
+    # somebody actually picks a color for it, so the chart looks exactly as
+    # drawn (and stays readable in dark mode) out of the box.
+    #
+    # The ruffle is drawn in a hot pink that's really just a marker for
+    # "this bit is the second color", so `default` draws it as the Bohème
+    # Velvet raspberry instead. It points at the same *pinkText anchor the
+    # yarn swatch and the instruction text use, so all three stay one shade
+    # — and it lives here rather than in the SVG so an Inkscape re-export
+    # can't quietly undo it.
+    #
+    # The magic-ring markers are deliberately *not* listed: they're the
+    # chart's own annotation pink (#b7718d, the same accent the Puff Stitch
+    # Coaster's direction arrows use), not yarn. Add "#b7718d" to the pink
+    # yarn's list below if you'd rather they follow the yarn instead.
+    colors:
+      - yarn: black
+        hex: "#000000"
+      - yarn: pink
+        hex:
+          - "#ff0082"
+          - "#ff0086"
+        default: *pinkText
+
+    # One entry per step-N layer in the drawing, in order — nine of them.
+    # The lines below are read straight off the chart's own symbols, so the
+    # counts are right, but the wording and every `info` still need writing.
+    #
+    # Steps 1–3 and 4–6 draw the two eye cups, which are worked identically:
+    # if you'd rather they didn't read as Rounds 1–6 straight through, give
+    # those steps a `label:` ("Eye 1 — Round 1", ...), which replaces the
+    # automatic "Round N" outright.
+    steps:
+      # `id` names a step so other steps can point at it, instead of writing
+      # "Round 1" by hand and having it go stale the moment a round moves.
+      # Refer to it from prose with `[#cup-start]` (borrows that step's own
+      # live label) or `[your own words](#cup-start)`; from a `line`, with a
+      # `ref:` segment — see Round 4 below for both.
+      - line: "MR: 8 SC"
+        id: cup-start
+        total: 8
+        # `[black]` references the yarn with `id: black` under materials.yarns
+        # — it renders that yarn's name in that yarn's color, and follows
+        # both the color and the name a visitor sets in the Settings card.
+        # Use `[your own words](black)` to keep your own wording while still
+        # taking the yarn's color.
+        info: We'll start with the right side of the eye mask by creating a magic ring with 8 single crochets in [black] super bulky yarn and a 4mm hook.
+
+      - line: "8 SC inc"
+        total: 16
+        info: Then we'll do 8 single crochet increases.
+
+      - line: "(1 SC, 1 SC inc) x 8"
+        # `id` here too, so Round 4 can say "worked as Round 1 to Round 3"
+        # without either number being written down.
+        id: cup-end
+        total: 24
+        info: Then we'll repeat the pattern of 1 single crochet and 1 single crochet increase around.
+
+      - info: Slip stitch to close the round, or finish off by cutting the yarn and making an invisible join. Weave in the end or leave it out to crochet around it in the [attachment round](#attachment).
+
+      # A `ref:` segment inside the line, and a `[#id]` inside the prose —
+      # both render the target's live label and jump to it when clicked.
+      - line:
+          - text: "MR: 8 SC"
+        total: 8
+        info: Now we'll start on the left side of the mask, just like [the right side](#cup-start), by making a magic ring with 8 single crochets.
+
+      - line: "8 SC inc"
+        total: 16
+        info: Then we'll do 8 single crochet increases again.
+
+      - line: "(1 SC, 1 SC inc) x 8"
+        total: 24
+        info: Then we'll continue the pattern of 1 single crochet and 1 single crochet increase around. DO NOT finish off after this step.
+
+      # The joining round, broken into the four pieces the drawing already
+      # groups it into. `parts` turns this step into the same collapsible
+      # card a written pattern's repeat block uses: the line and info here
+      # stay visible for anyone following the round straight through, and the
+      # parts fold away underneath — each with its own explanation, its own
+      # checkbox, and its own copy of the chart with just that piece lit up.
+      #
+      # Parts are matched to the drawing by position: the first one below is
+      # the group named "Part 1" inside the step-7 layer, and so on. If A/B/C/D
+      # don't come out in the order you drew 1/2/3/4, reorder these rather
+      # than renaming the groups.
+      - line: "2 SC, 1 SC INC, 1 HDC, 1 DC, 1 TR INC, 1 DC, 1 HDC, 1 HDC INC, 2 HDC, 1 HDC INC, 2 HDC, [1 HDC, 1 SC], 1 SC, 3 SLST, 1 SC, [1 SC, 1 HDC], 4 CH, [1 HDC, 1 SC], 1 SC, 3 SLST, 1 SC, [1 SC, 1 HDC], 2 HDC, 1 HDC INC, 2 HDC, 1 HDC INC, 1 HDC, 1 DC, 1 TR INC, 1 DC, 1 HDC, 1 SC INC, 2 SC, 1 HDC INC, 1 DC, 1 TR, 4 DC, 1 TR, 1 DC, 1 HDC INC, 1 SC"
+        # What Round 3's note calls "the attachment round".
+        id: attachment
+        total: 70
+        info: Alright, this will be the most complicated round, but bear with me. If it's too complicated at first glance, you can expand this section to break it up into different parts.
+        parts:
+          # `label` replaces the automatic "Part 1"/"Part 2"/... heading.
+          # Only this one is filled in — I have your own Part A wording, but
+          # splitting the rest of the line above between Parts B/C/D is a
+          # judgement about which stitches you drew into which group, so
+          # that's yours to make.
+          - label: Part A
+            line: "1 SC, 1 SC INC, 1 HDC, 1 DC, 1 TR INC, 1 DC, 1 HDC, 1 HDC INC, 2 HDC, 1 HDC INC, 2 HDC, [1 HDC, 1 SC], 1 SC, 3 SLST, 1 SC, [1 SC, 1 HDC]"
+            total: 26
+            info: Follow the pattern as written out above. For the last part, do a single crochet and then a half double crochet in the same stitch.
+
+          - label: Part B
+            line: "4 CH"
+            total: 4
+
+          - label: Part C
+            line: "[1 HDC, 1 SC], 1 SC, 3 SLST, 1 SC, [1 SC, 1 HDC], 2 HDC, 1 HDC INC, 2 HDC, 1 HDC INC, 1 HDC, 1 DC, 1 TR INC, 1 DC, 1 HDC, 1 SC INC, 2 SC, 1 HDC INC, 1 DC, 1 TR"
+            total: 31
+            info: Connect to the right eye patch with a half double crochet and then do a single crochet in the same stitch. Continue the pattern as written out above.
+
+          - label: Part D
+            line: 4 DC
+            total: 4
+            info: Make 4 double crochets into the 4 chains that were made to connect the two eye patches.
+
+          - label: Part E
+            total: 5
+            line: 1 TR, 1 DC, 1 HDC INC, 1 SC
+
+      - line: "24 SC, 1 SC DEC, 2 SC, 1 SC DEC, 38 SC"
+        total: 66
+        info: We'll do 24 single crochets around. Then, in the part for the nose, we'll do a single crochet decrease in the single crochet and chain from the previous round. Then 2 more single crochets and another single crochet decrease in the chain and single crochet from the previous round. We'll finish with 38 single crochets.
+      - info: Slip stitch to close the round, or finish off by cutting the yarn and making an invisible join. Weave in the end.
+      - info: For the ruffles, switch to a [pink] fine yarn and a 2mm hook.
+
+      # The one round worked in the second color — 198 DC, drawn in pink.
+      - line: "198 DC"
+        color: *pinkText
+        total: 198
+      - info: Slip stitch to close the round, or finish off by cutting the yarn and making an invisible join. Weave in the end.
+
+  - part: Band
+    info: "To be able to actually wear the mask, we'll attach an elastic band/thread to it that fits around your head. You can use any size elastic, as long as you can attach it to the mask and it doesn't give you a headache."
+    # A section's photos, shown under its info — the same `images:` a chart
+    # section and an individual instruction can both carry.
+    # images:
+    #   - /images/creations/Sleeping-mask-1.webp
+    # A written part's list is `instructions:` — `steps:` is the chart
+    # section's key, and only a chart has steps (they map one-to-one onto the
+    # drawing's step-N layers).
+    instructions:
+      - line: "Attach the elastic band to one side of the mask."
+        info: I did this by inserting the elastic band through the back of the mask and then going one stitch down and inserting it again to the back of the mask. I then sewed the end of the elastic band to the other side to secure it to the mask.
+        images:
+          - /images/patterns/sleeping-mask/band-attachment.webp
+      - line: "Hold the mask in front of your face. Wrap the elastic band around your head and hold it on the other side of the mask where you will attach the band. Adjust the tension on the band by pulling it as tight or as loose as you want."
+        info: "Don't pull it too tight so it doesn't press on your eyes too hard and don't leave it too loose, so it doesn't fall down. Mark that spot on the band or keep holding your finger on that spot to indicate where it needs to be attached."
+      - line: Cut the elastic band far enough past the marked spot so you can attach it to the other side of the mask, repeating the same steps as before.
+      - info: "Optional: You can single crochet around the elastic band with the fine [pink] yarn and a 2mm hook to make it look more put together. When you do, make sure to push the stitches tighter together so it doesn't pull when the band is stretched out. It also makes the stitches denser so you won't see the band through it as easily."
+
+outro:
+  - text: Now you've finished your sleeping mask! May it bring you lots of well-earned rest!
+  - images:
+    - /images/creations/Sleeping-mask-1.webp

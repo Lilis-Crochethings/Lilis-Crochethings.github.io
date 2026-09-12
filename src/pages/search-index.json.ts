@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { getTagChipData } from "../lib/tags";
 import type { SearchDoc } from "../lib/search";
+import { listedPatterns } from "../lib/hiddenPatterns";
 
 export const prerender = true;
 
@@ -15,7 +16,7 @@ export const GET: APIRoute = async () => {
   const taxonomy = taxonomyEntry[0].data.tags;
   const typesTaxonomy = typesEntry[0].data.types;
 
-  const patternDocs: SearchDoc[] = patterns.map((pattern) => {
+  const patternDocs: SearchDoc[] = listedPatterns(patterns).map((pattern) => {
     const typeChips = [pattern.data.type, ...(pattern.data.subtypes ?? [])].map((id) => getTagChipData(id, typesTaxonomy));
     return {
       type: "pattern",

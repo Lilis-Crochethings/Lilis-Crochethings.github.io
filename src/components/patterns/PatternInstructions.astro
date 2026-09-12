@@ -1,14 +1,13 @@
 ---
 import { getCollection, type CollectionEntry } from "astro:content";
-import { buildRenderRows, buildChartRows, resolveInfoText } from "../../lib/patternInstructions";
+import { buildRenderRows, buildChartRows, chartStepCount, chartPartCounts, resolveInfoText, resolveStepReferences, rowDomId } from "../../lib/patternInstructions";
 import { loadPatternChart, chartStepStyle, type LoadedChart } from "../../lib/patternChart";
 import { resolveYarn } from "../../lib/yarn";
 import ColoredSegments from "./ColoredSegments.astro";
 import PatternSettingsCard from "./PatternSettingsCard.astro";
 
 const { pattern } = Astro.props as { pattern: CollectionEntry<"patterns"> };
-const parts = pattern.data.pattern ?? [];
-const charts = pattern.data.charts ?? [];
+const patternSections = pattern.data.pattern ?? [];
 const yarns = pattern.data.materials?.yarns ?? [];
 const previewBase = pattern.data.materials?.colorPreviewBase;
 
@@ -45,42 +44,76 @@ type Section = {
   label: string;
   info?: string;
   images?: string[];
-  rows: ReturnType<typeof buildRenderRows>;
+  rows: (ReturnType<typeof buildRenderRows>[number] | ReturnType<typeof buildChartRows>[number])[];
   /** The drawing this card's steps are read off, or null for a written part. */
   chart: (LoadedChart & { preview: boolean }) | null;
 };
 
-const chartSections: Section[] = charts.map((chart, chartIndex) => ({
-  heading: chart.name,
-  label: chart.name ?? `${pattern.data.title} chart`,
-  info: chart.info,
-  rows: buildChartRows(chart, chartIndex, yarns),
-  // Read and rewritten from the drawing itself at build time — see
-  // lib/patternChart.ts. Throws (failing the build) if the file's step
-  // layers don't line up with the steps listed in the yaml, so a chart and
-  // its instructions can't silently drift apart. What comes back is the
-  // drawing *once*, plus the id every copy of it below points at.
-  chart: {
-    ...loadPatternChart({
-      file: chart.file,
-      idPrefix: `chart-${chartIndex}`,
-      expectedSteps: chart.steps.length,
-    }),
-    preview: chart.preview,
-  },
-}));
+// Built in the order they're written, so a chart, a written "attach the
+// strap" part and another chart render as three cards in that sequence — see
+// the `pattern` field in content.config.ts for why this is one list.
+//
+// The section's own index namespaces its rows' line ids (and a chart's SVG
+// element ids), which is what keeps a pattern's charts and written parts
+// sharing one progress store without colliding.
+const sections: Section[] = patternSections.map((section, sectionIndex) => {
+  if (!("file" in section)) {
+    return {
+      heading: section.part,
+      label: section.part,
+      info: section.info,
+      images: section.images,
+      rows: buildRenderRows(section, sectionIndex, yarns),
+      chart: null,
+    };
+  }
 
-const partSections: Section[] = parts.map((part, partIndex) => ({
-  heading: part.part,
-  label: part.part,
-  info: part.info,
-  images: part.images,
-  rows: buildRenderRows(part, partIndex, yarns),
-  chart: null,
-}));
+  return {
+    heading: section.chart,
+    label: section.chart ?? `${pattern.data.title} chart`,
+    info: section.info,
+    rows: buildChartRows(section, sectionIndex, yarns),
+    // Read and rewritten from the drawing itself at build time — see
+    // lib/patternChart.ts. Throws (failing the build) if the file's step
+    // layers don't line up with the steps listed in the yaml, so a chart and
+    // its instructions can't silently drift apart. What comes back is the
+    // drawing *once*, plus the id every copy of it below points at.
+    chart: {
+      ...loadPatternChart({
+        file: section.file,
+        idPrefix: `chart-${sectionIndex}`,
+        // Both counted off the entries that actually draw something — a
+        // standalone note in `steps` claims no layer. See chartStepCount().
+        expectedSteps: chartStepCount(section),
+        // Only steps that actually list parts are looked for in the drawing —
+        // see ChartSource.expectedParts.
+        expectedParts: chartPartCounts(section),
+        // Which of the drawing's hexes belong to which yarn, so a visitor's
+        // color pick repaints those stitches — see applyYarnOverrides() in
+        // the script below for the other half of this.
+        colors: section.colors,
+      }),
+      preview: section.preview,
+    },
+  };
+});
 
-const sections = [...chartSections, ...partSections];
+
+// Cross-references (see resolveStepReferences) are filled in here, across
+// every section at once — a reference may point at a round in a different
+// card than the one making it, and none of the labels it needs exist until
+// all the rows above are built.
+resolveStepReferences(sections.flatMap((section) => section.rows));
+
+// Every chart's drawn-color defaults, as one root-scoped stylesheet (see
+// buildYarnColors in lib/patternChart.ts). is:inline because these are
+// per-pattern values computed from content, not a stylesheet Astro could
+// usefully scope or bundle — and they have to land on :root, which a scoped
+// <style> in this component would rewrite out from under them.
+const chartColorCss = sections.map((section) => section.chart?.colorCss ?? "").join("");
 ---
+
+{chartColorCss && <style is:inline set:html={chartColorCss} />}
 
 <div class="pattern-instructions" data-pattern-slug={pattern.id}>
   <h2 class="pattern-instructions-title">Pattern</h2>
@@ -114,6 +147,7 @@ const sections = [...chartSections, ...partSections];
             preserveAspectRatio="xMidYMid meet"
             role="img"
             aria-label={`${section.label}, complete`}
+            style={`--chart-aspect:${section.chart.aspectRatio}`}
           ><use href={`#${section.chart.rootId}`} /></svg>
         </div>
       )}
@@ -142,7 +176,7 @@ const sections = [...chartSections, ...partSections];
 
           if (row.kind === "line") {
             return (
-              <li class="row row-line" data-line-id={row.lineId} data-chart-step={row.step}>
+              <li class="row row-line" id={rowDomId(row.lineId)} data-line-id={row.lineId} data-chart-step={row.step}>
                 <label class="row-check">
                   <input type="checkbox" class="line-check" data-line-id={row.lineId} aria-label={row.label ? `Mark ${row.label} done` : "Mark done"} />
                 </label>
@@ -175,7 +209,7 @@ const sections = [...chartSections, ...partSections];
                         preserveAspectRatio="xMidYMid meet"
                         role="img"
                         aria-label={row.label ? `${row.label} on the chart` : `${section.label}, this step`}
-                        style={chartStepStyle(section.chart.steps, row.step)}
+                        style={`--chart-aspect:${section.chart.aspectRatio};${chartStepStyle(section.chart.steps, row.step) ?? ""}`}
                       ><use href={`#${section.chart.rootId}`} /></svg>
                     </div>
                   )}
@@ -185,7 +219,7 @@ const sections = [...chartSections, ...partSections];
           }
 
           return (
-            <li class="row row-block">
+            <li class="row row-block" id={rowDomId(row.lineIds[0])}>
               <div class="row-summary">
                 <label class="row-check">
                   <input type="checkbox" class="line-check block-check" data-controls={row.lineIds.join(" ")} aria-label={row.labelRange ? `Mark ${row.labelRange} done` : "Mark repeated rows done"} />
@@ -206,23 +240,73 @@ const sections = [...chartSections, ...partSections];
                       ))}
                     </div>
                   )}
+                  {/* The whole step, as one drawing, on the summary — so the
+                      shape of the round is there for anyone reading it
+                      straight through, before they open the parts. */}
+                  {section.chart && row.step !== undefined && (
+                    <div class="row-step-chart">
+                      <svg
+                        class="chart-svg"
+                        viewBox={section.chart.viewBox}
+                        preserveAspectRatio="xMidYMid meet"
+                        role="img"
+                        aria-label={row.labelRange ? `${row.labelRange} on the chart` : `${section.label}, this step`}
+                        style={`--chart-aspect:${section.chart.aspectRatio};${chartStepStyle(section.chart.steps, row.step) ?? ""}`}
+                      ><use href={`#${section.chart.rootId}`} /></svg>
+                    </div>
+                  )}
                 </div>
                 <button type="button" class="block-toggle" aria-expanded="false" aria-label={row.labelRange ? `Expand ${row.labelRange}` : "Expand repeated rows"}>
                   <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
               </div>
               <ol class="block-detail">
+                {/* A repeat gets no `id` of its own: the block's <li> already
+                    carries rowDomId(lineIds[0]), and a reference points at
+                    the card as a whole rather than at one entry inside it, so
+                    giving both the same id would just be a duplicate. */}
                 {row.repeats.map((repeat) => (
-                  <li class="row row-line" data-line-id={repeat.lineId}>
+                  <li class="row row-line" data-line-id={repeat.lineId} data-chart-step={repeat.step}>
                     <label class="row-check">
                       <input type="checkbox" class="line-check" data-line-id={repeat.lineId} aria-label={repeat.label ? `Mark ${repeat.label} done` : "Mark done"} />
                     </label>
                     <div class="row-body">
                       <p class="row-text">
                         {repeat.label && <span class="line-label">{repeat.label}: </span>}
-                        <ColoredSegments segments={row.segments} spaced />
-                        {row.total !== undefined && <span class="line-total">({row.total})</span>}
+                        {/* Each entry's own, never the block's — see
+                            RenderBlockRow.repeats. A repeated round was
+                            handed the block's line and count when it was
+                            built; a part carries its own, because a quarter
+                            of a round doesn't end on the whole round's
+                            stitch count. */}
+                        <ColoredSegments segments={repeat.segments} spaced />
+                        {repeat.total !== undefined && <span class="line-total">({repeat.total})</span>}
                       </p>
+                      {repeat.info && (
+                        <p class="row-note"><ColoredSegments segments={repeat.info} /></p>
+                      )}
+                      {repeat.images && repeat.images.length > 0 && (
+                        <div class="row-images">
+                          {repeat.images.map((src) => (
+                            <img src={src} alt={repeat.label ? `${repeat.label} photo` : `${section.label} photo`} class="gallery-thumb row-image" loading="lazy" decoding="async" />
+                          ))}
+                        </div>
+                      )}
+                      {/* This part alone, lit up against the rest of its own
+                          round — the same worked/upcoming cascade the steps
+                          get, one level down. */}
+                      {section.chart && repeat.step !== undefined && repeat.part !== undefined && (
+                        <div class="row-step-chart">
+                          <svg
+                            class="chart-svg"
+                            viewBox={section.chart.viewBox}
+                            preserveAspectRatio="xMidYMid meet"
+                            role="img"
+                            aria-label={repeat.label ? `${repeat.label} on the chart` : `${section.label}, this part`}
+                            style={`--chart-aspect:${section.chart.aspectRatio};${chartStepStyle(section.chart.steps, repeat.step, section.chart.partsByStep[repeat.step], repeat.part) ?? ""}`}
+                          ><use href={`#${section.chart.rootId}`} /></svg>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -462,8 +546,42 @@ const sections = [...chartSections, ...partSections];
     // broadcasts a change (see the "pattern-yarn-override-change" listener
     // below), not just once on load, so editing a yarn updates instructions
     // already on screen without a reload.
+    // The chart half of the same idea: a chart declares which of its drawn
+    // hexes belong to which yarn (see chartColor in content.config.ts), and
+    // patternChart.ts rewrites each into
+    // `var(--chart-yarn-<id>, <as drawn>)`. Setting that property here is
+    // what makes a picked color reach the drawing; leaving it unset is what
+    // makes the chart look exactly as Lili drew it.
+    //
+    // Deliberately on the document root rather than on the chart's own card:
+    // the lightbox clones a chart copy into #chart-lightbox-frame (see
+    // patterns/[slug].astro), well outside that card, and a custom property
+    // set on the card would simply not inherit that far — the big view would
+    // snap back to the drawn colors. One pattern per page, so there's
+    // nothing on the root for it to collide with.
+    const chartYarnProps = new Set<string>();
+    function applyChartYarnColors(overrides: ReturnType<typeof readYarnOverrides>) {
+      const root = document.documentElement;
+      const next = new Set<string>();
+      for (const [yarnId, override] of Object.entries(overrides)) {
+        if (!override?.hex) continue;
+        const property = `--chart-yarn-${yarnId}`;
+        root.style.setProperty(property, override.hex);
+        next.add(property);
+      }
+      // Anything set on a previous pass and no longer picked (a cleared
+      // row, or Reset) has to be removed, not just skipped — the property
+      // would otherwise keep winning over the var()'s drawn-color fallback.
+      chartYarnProps.forEach((property) => {
+        if (!next.has(property)) root.style.removeProperty(property);
+      });
+      chartYarnProps.clear();
+      next.forEach((property) => chartYarnProps.add(property));
+    }
+
     function applyYarnOverrides() {
       const overrides = readYarnOverrides(slug!);
+      applyChartYarnColors(overrides);
       container.querySelectorAll<HTMLElement>(".segment[data-yarn-id]").forEach((segment) => {
         const yarnId = segment.dataset.yarnId;
         if (!yarnId) return;
@@ -607,6 +725,47 @@ const sections = [...chartSections, ...partSections];
       });
     }
 
+    // Cross-references (.step-ref, from an `id:`/`ref:` pair in the yaml)
+    // are real anchors, so they already work without this. What this adds is
+    // the part a bare fragment jump does badly: scrolling smoothly rather
+    // than teleporting, landing the row in the middle of the viewport
+    // instead of under the sticky header, and flashing it briefly so it's
+    // obvious which of a page full of near-identical rounds you just
+    // arrived at. A referenced round inside a collapsed repeat block is
+    // opened first, or the jump would land on something still hidden.
+    container.addEventListener("click", (event) => {
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.step-ref");
+      if (!link) return;
+      // Let a modified click do its normal thing (new tab, download, ...).
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+      if (!target) return;
+      event.preventDefault();
+
+      // A block's open state lives on its toggle's aria-expanded (see the
+      // .block-toggle handler further down), not on a class.
+      const toggle = target.closest(".row-block")?.querySelector<HTMLButtonElement>(".block-toggle");
+      if (toggle?.getAttribute("aria-expanded") === "false") toggle.click();
+
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Restarts the animation even when the same row is jumped to twice in
+      // a row — without the reflow between, re-adding the class in the same
+      // frame is a no-op.
+      target.classList.remove("row-flash");
+      void target.offsetWidth;
+      target.classList.add("row-flash");
+      // Keeps the URL shareable/back-navigable exactly as the anchor would
+      // have, without the jump preventDefault just suppressed.
+      history.replaceState(null, "", link.hash);
+    });
+
+    container.addEventListener("animationend", (event) => {
+      if ((event as AnimationEvent).animationName.includes("row-flash")) {
+        (event.target as HTMLElement).classList.remove("row-flash");
+      }
+    });
+
     document.addEventListener("pattern-yarn-override-change", (e) => {
       const detail = (e as CustomEvent<{ slug?: string }>).detail;
       if (detail?.slug !== slug) return;
@@ -674,7 +833,9 @@ const sections = [...chartSections, ...partSections];
     });
 
     // Tapping anywhere on a line/info row's own card (other than an image,
-    // which opens the lightbox) manually flips that row's checkbox — the
+    // which opens the lightbox, or a link, which goes where it says — a
+    // cross-reference to another round shouldn't also tick off the round
+    // you're leaving) manually flips that row's checkbox — the
     // checkbox/label already toggles natively, this just extends the same
     // tap target to the whole card. Applies to both top-level lines and
     // lines nested inside an expanded block. Checking the last line in a
@@ -685,7 +846,7 @@ const sections = [...chartSections, ...partSections];
       row.addEventListener("click", (e) => {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
-        if (target.closest("img") || target.closest(".row-check") || target.closest(".row-step-chart")) return;
+        if (target.closest("img") || target.closest(".row-check") || target.closest(".row-step-chart") || target.closest("a[href]")) return;
         const checkbox = row.querySelector<HTMLInputElement>('input[type="checkbox"]');
         if (!checkbox) return;
         checkbox.checked = !checkbox.checked;
@@ -700,7 +861,7 @@ const sections = [...chartSections, ...partSections];
       summary.addEventListener("click", (e) => {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
-        if (target.closest("img") || target.closest(".row-check") || target.closest(".block-toggle")) return;
+        if (target.closest("img") || target.closest(".row-check") || target.closest(".block-toggle") || target.closest("a[href]")) return;
         const checkbox = summary.querySelector<HTMLInputElement>(".block-check");
         if (!checkbox) return;
         const nextChecked = !(checkbox.checked && !checkbox.indeterminate);
@@ -947,6 +1108,15 @@ const sections = [...chartSections, ...partSections];
   margin-top: 0.6rem;
 }
 
+/* A section's own photos are the one place this grid isn't the last thing
+   in its container — they sit between the section's info and its first
+   instruction row, so they need to push that row away too. Matches
+   .part-info's own bottom margin, so a section reads the same whether it
+   opens with text, photos, or both. */
+.part-images {
+  margin-bottom: 1rem;
+}
+
 .row-image {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -1101,6 +1271,32 @@ const sections = [...chartSections, ...partSections];
 
   .chart-svg:hover {
     transform: none;
+  }
+}
+
+/* The brief highlight a row gets when a cross-reference jumps to it. Rounds
+   look very alike, so arriving somewhere mid-list without a cue leaves you
+   counting to work out whether anything moved. Fades out rather than
+   toggling, so it reads as "this one" and then gets out of the way. */
+@keyframes row-flash {
+  from {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.row-flash {
+  animation: row-flash 1.6s ease-out;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The cue still has to happen — it's the only signal that the jump
+     landed — but without the fade animating. */
+  .row-flash {
+    animation-duration: 0.01s;
   }
 }
 

@@ -244,17 +244,78 @@ const INFO_COLOR_REF_RE = /\[([^\]]*)\](?:\(([^)]+)\))?/g;
 function checkInfoColorRefs(
   text: string | undefined,
   yarnIds: Set<string>,
+  instructionIds: Set<string>,
   path: (string | number)[],
   ctx: z.RefinementCtx,
 ) {
   if (!text) return;
   for (const match of text.matchAll(INFO_COLOR_REF_RE)) {
-    const yarnId = match[2] ?? match[1];
-    if (!yarnIds.has(yarnId)) {
+    const target = match[2] ?? match[1];
+    // A leading "#" means another instruction rather than a yarn — see
+    // resolveInfoText() in lib/patternInstructions.ts, whose split this
+    // mirrors so a typo'd reference of either kind fails here, at the line
+    // that wrote it, rather than rendering as plain text or a dead link.
+    if (target.startsWith("#")) {
+      const instructionId = target.slice(1);
+      if (!instructionIds.has(instructionId)) {
+        ctx.addIssue({
+          code: "custom",
+          path,
+          message: `"${instructionId}" is not an id set on any instruction in this pattern — add \`id: ${instructionId}\` to the round/step being referred to.`,
+        });
+      }
+      continue;
+    }
+    if (!yarnIds.has(target)) {
       ctx.addIssue({
         code: "custom",
         path,
-        message: `"${yarnId}" is not a yarn id defined in materials.yarns`,
+        message: `"${target}" is not a yarn id defined in materials.yarns`,
+      });
+    }
+  }
+}
+
+// Every `id` an instruction in this pattern declares, across its charts and
+// its written parts alike — collected up front because a reference is free
+// to point forwards, so nothing can be checked until all of them are known.
+// Duplicates are reported here too: two instructions sharing an id would
+// leave every reference to it pointing at whichever came first.
+// Takes the ids already pulled out of the pattern (an instruction entry is a
+// union, and a standalone info note has no `id` to read), each with the path
+// to report a clash against.
+function collectInstructionIds(
+  declared: { id: string | undefined; path: (string | number)[] }[],
+  ctx: z.RefinementCtx,
+): Set<string> {
+  const seen = new Set<string>();
+  for (const { id, path } of declared) {
+    if (!id) continue;
+    if (seen.has(id)) {
+      ctx.addIssue({ code: "custom", path, message: `id "${id}" is already used by another instruction — ids must be unique within a pattern.` });
+      continue;
+    }
+    seen.add(id);
+  }
+  return seen;
+}
+
+// The `ref:` half of the same idea — a reference written as its own segment
+// inside an instruction line (see instructionSegment above) rather than in
+// prose.
+function checkLineRefs(
+  line: unknown,
+  instructionIds: Set<string>,
+  path: (string | number)[],
+  ctx: z.RefinementCtx,
+) {
+  if (!Array.isArray(line)) return;
+  for (const segment of line as { ref?: string }[]) {
+    if (segment.ref && !instructionIds.has(segment.ref)) {
+      ctx.addIssue({
+        code: "custom",
+        path,
+        message: `"${segment.ref}" is not an id set on any instruction in this pattern — add \`id: ${segment.ref}\` to the round/step being referred to.`,
       });
     }
   }
@@ -333,9 +394,20 @@ const patternSafetyEyes = z.object({
 // swatch, which resolves the same pair) and a typo'd alias is already a
 // YAML parse error before this schema ever runs.
 const instructionSegment = z.object({
-  text: z.string(),
+  text: z.string().optional(),
   color: themedColor.optional(),
-}).strict();
+  // Points at another instruction's `id` (see instructionLineFields/chartStep
+  // below), rendered as a link showing that instruction's own live label —
+  // "Repeat Round 3", where "Round 3" renumbers itself if rounds move.
+  //
+  // A key of its own, rather than the [#id] syntax `info` prose uses,
+  // because an instruction line legitimately contains square brackets
+  // already: "FLO: [1 SLST, 2 CH, 2 HDC]" is the `[]` abbreviation. Set
+  // `text` alongside it to word the link yourself instead.
+  ref: z.string().optional(),
+}).strict().refine((segment) => segment.text !== undefined || segment.ref !== undefined, {
+  message: "a segment needs `text`, `ref`, or both",
+});
 
 // A line's content is either a single plain string (the common case) or an
 // array of segments when the color changes mid-line — kept as a union
@@ -350,6 +422,10 @@ const instructionLineContent = z.union([z.string(), z.array(instructionSegment).
 // falls through to the next.
 const instructionLineFields = {
   line: instructionLineContent,
+  // A name other instructions can refer to this one by (see `ref` above and
+  // the [#id] syntax in info text). Free-form but unique across the whole
+  // pattern — checked in the superRefine below.
+  id: z.string().regex(/^[A-Za-z][\w-]*$/, "must start with a letter and contain only letters, digits, - or _").optional(),
   // Falls back to the line's own instruction-entry-level color, and below
   // that to the part's color, when a segment doesn't set its own — see
   // buildRenderRows() in src/lib/patternInstructions.ts.
@@ -415,6 +491,30 @@ const outroEntry = z.union([
   z.object({ images: z.array(z.string()).min(1) }).strict(),
 ]);
 
+// One distinguishable piece of a single chart step — the two straps and two
+// joins of an eye mask's attachment round, say. Same written shape a step or
+// a round has, so a part reads like any other instruction.
+//
+// A step with parts renders exactly like a written pattern's repeat block:
+// the step's own line and explanation stay at the top for anyone who reads
+// it straight through, with the parts folded away underneath for anyone who
+// wants it broken down. Each part checks off on its own and shows its own
+// copy of the chart with just that piece emphasized.
+//
+// The drawing has to agree: a step declaring parts must have that many
+// groups named "Part 1", "Part 2", ... inside its own step-N layer, or the
+// build fails (see loadPatternChart). Steps that declare none are read
+// exactly as before, whatever the drawing groups internally.
+const chartStepPart = z.object({
+  line: instructionLineContent,
+  color: themedColor.optional(),
+  total: z.number().optional(),
+  info: z.string().optional(),
+  // Replaces the automatic "Part N" heading.
+  label: z.string().optional(),
+  images: z.array(z.string()).optional(),
+}).strict();
+
 // One numbered step of a chart — the same written line a round/row gets in
 // a written pattern (`line`/`color`/`total`/`info`, reusing the exact same
 // shapes so a chart's instructions read and render identically), paired
@@ -424,6 +524,8 @@ const outroEntry = z.union([
 // which fails the build if the two counts don't line up.
 const chartStep = z.object({
   line: instructionLineContent,
+  // As instructionLineFields.id — a name other instructions can point at.
+  id: z.string().regex(/^[A-Za-z][\w-]*$/, "must start with a letter and contain only letters, digits, - or _").optional(),
   color: themedColor.optional(),
   total: z.number().optional(),
   info: z.string().optional(),
@@ -434,6 +536,75 @@ const chartStep = z.object({
   // isn't numbered at all (e.g. "Foundation" or "Edging").
   label: z.string().optional(),
   images: z.array(z.string()).optional(),
+  // Breaks this one step down into separately-explained, separately
+  // checkable pieces — see chartStepPart above.
+  parts: z.array(chartStepPart).min(1).optional(),
+}).strict();
+
+// A standalone note between a chart's steps — "finish off here and weave in
+// the end", say. The written-pattern counterpart (instructionInfoEntry) has
+// always existed; this is the same thing for a chart.
+//
+// It draws nothing, so it claims no `step-N` layer and doesn't advance the
+// round numbering: a note sitting between Rounds 3 and 4 leaves the step
+// after it as Round 4, still pointing at the step-4 layer. It is still
+// checkable, like its written counterpart, since "cut the yarn" is as much a
+// thing you do and tick off as a round is.
+const chartStepInfo = z.object({
+  info: z.string(),
+  images: z.array(z.string()).optional(),
+}).strict();
+
+// Order matters only for readability — chartStep requires `line` and
+// chartStepInfo forbids it, so the two can't both match an entry.
+const chartStepEntry = z.union([chartStep, chartStepInfo]);
+
+// One drawn color in a chart, tied to the yarn it represents — the
+// chart-format counterpart to a written pattern's `color:` anchors, which
+// tie an instruction's text to a yarn the same way.
+//
+// A chart is a picture, not text, so there's nothing to anchor: the tie has
+// to be made through the actual hex Inkscape wrote into the drawing. Naming
+// it here is what lets a visitor's color pick in the Settings card repaint
+// that yarn's stitches right on the chart (see buildYarnColors() in
+// lib/patternChart.ts). Undeclared colors are left exactly as drawn, so a
+// chart only opts in to as much of this as it wants.
+//
+// `hex` takes one color or a list, because one yarn routinely ends up drawn
+// as more than one: Inkscape happily leaves a symbol's fill and stroke a
+// couple of digits apart. Every hex listed has to actually appear in the
+// file — patternChart.ts fails the build otherwise, so a typo or a
+// re-export that shifted a color can't silently leave a swatch that
+// repaints nothing.
+const chartColor = z.object({
+  // Must be an id from this pattern's own materials.yarns (checked in the
+  // superRefine below) — and CSS-identifier-safe, since it's spliced
+  // straight into a --chart-yarn-<id> custom property name.
+  yarn: z.string().regex(/^[A-Za-z][\w-]*$/, "must start with a letter and contain only letters, digits, - or _"),
+  hex: z.union([hexColor, z.array(hexColor).min(1)])
+    // Normalized to a list right here so patternChart.ts only ever has one
+    // shape to handle, rather than re-testing which form each entry took.
+    .transform((hex) => (typeof hex === "string" ? [hex] : hex)),
+  // What to *draw* this yarn as before any visitor picks a color of their
+  // own. Omitted, the drawing keeps whatever it was drawn in (a greyscale
+  // still becoming theme-aware ink) — so this is only for a chart drawn in
+  // a stand-in color, where the hex above is really just an identifier for
+  // "which yarn" rather than a color decision.
+  //
+  // Belongs here rather than in the SVG precisely because Inkscape owns
+  // that file: a color corrected by hand in the export is silently undone
+  // by the next re-export, and nothing would fail to warn you.
+  //
+  // Takes a light/dark pair for the same reason instruction text does (see
+  // themedColor) — chart lines sit on the same card surface, and a hex
+  // deep enough to read on the white one is usually too dark on the
+  // near-black one. Point it at the yarn's own `color:` anchor
+  // (`default: *pinkText`) to keep the chart and the words describing it
+  // the same shade by construction. A bare hex is accepted for a color
+  // that genuinely reads either way.
+  default: z.union([hexColor, themedColor])
+    .transform((color) => (typeof color === "string" ? { light: color, dark: color } : color))
+    .optional(),
 }).strict();
 
 // One chart drawing. `file` is a public/ path to an SVG whose top-level
@@ -443,9 +614,14 @@ const chartStep = z.object({
 // step that are hidden in the source file (e.g. a "direction" arrow layer)
 // are revealed only while that step is the active one.
 const patternChart = z.object({
-  // Shown as the card's heading. Optional — a pattern with a single chart
-  // doesn't need one, since the card is already unambiguous on its own.
-  name: z.string().optional(),
+  // This chart's name, shown as the card's heading — the counterpart to a
+  // written part's `part:`, so the two kinds of section are titled the same
+  // way. Optional, unlike `part:`: a pattern with a single chart doesn't
+  // need one, since the card is already unambiguous on its own.
+  //
+  // Note it is NOT what tells a chart section from a written one — `file`
+  // is, since this can be absent. See patternSection.
+  chart: z.string().optional(),
   file: z.string(),
   // Whether this chart's steps are rounds or rows. Omitted entirely for a
   // chart whose steps aren't numbered at all (each step then needs its own
@@ -458,8 +634,18 @@ const patternChart = z.object({
   // default; set false for a chart where the finished drawing says nothing
   // the first step doesn't already.
   preview: z.boolean().default(true),
-  steps: z.array(chartStep).min(1),
+  // Which of the drawing's own colors a visitor can repaint, and as which
+  // yarn — see chartColor above. Omitted by a single-color chart, which has
+  // nothing to tell apart.
+  colors: z.array(chartColor).optional(),
+  steps: z.array(chartStepEntry).min(1),
 }).strict();
+
+// One section of a pattern — see the `pattern` field below. The two shapes
+// can't be confused: a chart requires `file`/`steps` and a written part
+// requires `part`, and both are `.strict()`, so an entry matches exactly one
+// of them.
+const patternSection = z.union([patternChart, patternPart]);
 
 const patterns = defineCollection({
   loader: glob({ pattern: "**/*.yaml", base: "./src/content/patterns" }),
@@ -478,6 +664,16 @@ const patterns = defineCollection({
     // to "written" so every pattern that predates chart support keeps
     // filtering correctly without needing the field added by hand.
     format: patternFormatId.default("written"),
+    // Unlisted: the page still builds and works at its own URL, but the
+    // pattern is kept off every surface that would lead someone to it who
+    // didn't already have the link — see lib/hiddenPatterns.ts, which every
+    // one of those surfaces goes through. For sharing a pattern that isn't
+    // ready to announce yet (a draft being proofread, a design held back
+    // for a launch) without having to pull the file out of the repo.
+    //
+    // Patterns only. A creation is a record of something finished, with no
+    // half-written state to sit in.
+    hidden: z.boolean().default(false),
     colors: z.array(colorId).optional(),
     tags: z.array(tagId).optional(),
     // Published date and, separately, when the pattern text/photos were last
@@ -496,7 +692,14 @@ const patterns = defineCollection({
     hoursSpent: z.number().optional(),
     hookSize: z.string().optional(),
     materials: z.object({
-      items: z.array(materialId).optional(),
+      // A bare id uses the catalog's label alone; `{ id, detail }` adds a
+      // second line under it, for a tool whose size/kind is the pattern's to
+      // state rather than the catalog's ("Elastic thread" / "2mm"). Same
+      // two-line tile the hook and safety-eye tiles already use.
+      items: z.array(z.union([
+        materialId,
+        z.object({ id: materialId, detail: z.string() }).strict(),
+      ])).optional(),
       yarns: z.array(patternYarn).optional(),
       safetyEyes: z.array(patternSafetyEyes).optional(),
       // General hook sizes this pattern needs, shown as their own tile
@@ -534,16 +737,22 @@ const patterns = defineCollection({
     // in shorthand — shown as a reference list on the detail page, in the
     // order given here rather than the catalog's own order.
     abbreviations: z.array(stitchId).optional(),
-    // The actual round-by-round/row-by-row instructions, split into named
-    // parts (Body, Head, ...) — see src/content/patterns/chunky-ducky.yaml
-    // for a fully worked example. Optional since most patterns currently
-    // only have metadata ("full written instructions coming soon").
-    pattern: z.array(patternPart).optional(),
-    // Chart drawings, one card each — the chart-format counterpart to
-    // `pattern` above, and renderable alongside it (a chart pattern can
-    // still have a plain written "Assembly" part). See
-    // src/content/patterns/puff-stitch-coaster.yaml for a worked example.
-    charts: z.array(patternChart).optional(),
+    // The pattern itself: an ordered list of sections, each rendered as its
+    // own card, in exactly the order written here. A section is either a
+    // written part (named, with round-by-round instructions — see
+    // chunky-ducky.yaml) or a chart drawing (see puff-stitch-coaster.yaml),
+    // and the two mix freely: chart, then a written "attach the strap" part
+    // with its photos, then another chart, is just three entries in a row.
+    //
+    // One list rather than the separate `pattern:`/`charts:` fields this
+    // used to have, because those could only ever render every chart first
+    // and every written part after — there was no way to say "this part
+    // comes between those two charts", which is the normal shape of a
+    // pattern that's partly drawn and partly written.
+    //
+    // Optional: most patterns still carry only metadata ("full written
+    // instructions coming soon").
+    pattern: z.array(patternSection).optional(),
     // Optional custom "you're done!" content — shown inside CongratsCard.astro
     // between its "Congratulations!" title and the card's own default
     // text/socials, e.g. a pattern-specific tip or a finished-piece photo the
@@ -599,23 +808,71 @@ const patterns = defineCollection({
     // materials/abbreviations ids are, so a typo'd yarn id is a build error
     // instead of silently rendering as plain unstyled text.
     const yarnIdSet = new Set(yarnIds);
-    (data.pattern ?? []).forEach((part, partIndex) => {
-      checkInfoColorRefs(part.info, yarnIdSet, ["pattern", partIndex, "info"], ctx);
-      (part.instructions ?? []).forEach((entry, entryIndex) => {
-        checkInfoColorRefs(entry.info, yarnIdSet, ["pattern", partIndex, "instructions", entryIndex, "info"], ctx);
+    // `pattern` is one ordered list of sections, each either a chart (it has
+    // `file`) or a written part (it has `part`) — see patternSection.
+    const sections = data.pattern ?? [];
+    const instructionIds = collectInstructionIds(
+      sections.flatMap((section, sectionIndex) =>
+        "file" in section
+          ? section.steps.map((step, stepIndex) => ({
+              // A standalone note has no `id` field at all.
+              id: "id" in step ? step.id : undefined,
+              path: ["pattern", sectionIndex, "steps", stepIndex, "id"] as (string | number)[],
+            }))
+          : (section.instructions ?? []).map((entry, entryIndex) => ({
+              id: "id" in entry ? entry.id : undefined,
+              path: ["pattern", sectionIndex, "instructions", entryIndex, "id"] as (string | number)[],
+            })),
+      ),
+      ctx,
+    );
+    sections.forEach((section, sectionIndex) => {
+      checkInfoColorRefs(section.info, yarnIdSet, instructionIds, ["pattern", sectionIndex, "info"], ctx);
+
+      if (!("file" in section)) {
+        const part = section;
+        (part.instructions ?? []).forEach((entry, entryIndex) => {
+          const entryPath = ["pattern", sectionIndex, "instructions", entryIndex] as (string | number)[];
+          checkInfoColorRefs(entry.info, yarnIdSet, instructionIds, [...entryPath, "info"], ctx);
+          if ("line" in entry) checkLineRefs(entry.line, instructionIds, [...entryPath, "line"], ctx);
+        });
+        return;
+      }
+
+      const chart = section;
+      // A chart color names the yarn its stitches are worked in, so a
+      // visitor's pick for that yarn can repaint them — an id with no yarn
+      // behind it has no swatch to be driven by, and would just be ignored.
+      (chart.colors ?? []).forEach((color, colorIndex) => {
+        if (!yarnIdSet.has(color.yarn)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["pattern", sectionIndex, "colors", colorIndex, "yarn"],
+            message: `"${color.yarn}" is not a yarn id defined in materials.yarns`,
+          });
+        }
       });
-    });
-    (data.charts ?? []).forEach((chart, chartIndex) => {
-      checkInfoColorRefs(chart.info, yarnIdSet, ["charts", chartIndex, "info"], ctx);
+      let stepNumber = 0;
       chart.steps.forEach((step, stepIndex) => {
-        checkInfoColorRefs(step.info, yarnIdSet, ["charts", chartIndex, "steps", stepIndex, "info"], ctx);
+        checkInfoColorRefs(step.info, yarnIdSet, instructionIds, ["pattern", sectionIndex, "steps", stepIndex, "info"], ctx);
+        // A standalone note (chartStepInfo) draws nothing and is never
+        // numbered, so neither the line check nor the label check below
+        // applies to it.
+        if (!("line" in step)) return;
+        stepNumber += 1;
+        checkLineRefs(step.line, instructionIds, ["pattern", sectionIndex, "steps", stepIndex, "line"], ctx);
+        (step.parts ?? []).forEach((part, partIndex) => {
+          const partPath = ["pattern", sectionIndex, "steps", stepIndex, "parts", partIndex] as (string | number)[];
+          checkInfoColorRefs(part.info, yarnIdSet, instructionIds, [...partPath, "info"], ctx);
+          checkLineRefs(part.line, instructionIds, [...partPath, "line"], ctx);
+        });
         // A step that isn't numbered has nothing to call itself — caught
         // here rather than rendering an unlabelled row nobody can refer to.
         if (!step.label && !(step["worked-in"] ?? chart["worked-in"])) {
           ctx.addIssue({
             code: "custom",
-            path: ["charts", chartIndex, "steps", stepIndex],
-            message: `Step ${stepIndex + 1} has no label, and neither it nor its chart sets "worked-in", so it can't be numbered.`,
+            path: ["pattern", sectionIndex, "steps", stepIndex],
+            message: `Step ${stepNumber} has no label, and neither it nor its chart sets "worked-in", so it can't be numbered.`,
           });
         }
       });
@@ -641,14 +898,15 @@ const patterns = defineCollection({
     // visitor they'll get, so it has to match what the file actually
     // carries — a "chart" pattern with no charts is a broken promise, and a
     // "written" one with charts would hide them from the format filter.
-    if (data.format === "chart" && !(data.charts ?? []).length) {
+    const chartSections = sections.filter((section) => "file" in section);
+    if (data.format === "chart" && chartSections.length === 0) {
       ctx.addIssue({
         code: "custom",
-        path: ["charts"],
+        path: ["pattern"],
         message: `format is "chart" but no charts are defined.`,
       });
     }
-    if (data.format !== "chart" && (data.charts ?? []).length > 0) {
+    if (data.format !== "chart" && chartSections.length > 0) {
       ctx.addIssue({
         code: "custom",
         path: ["format"],

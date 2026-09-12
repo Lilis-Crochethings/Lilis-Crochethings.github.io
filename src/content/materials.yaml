@@ -17,3 +17,8 @@ materials:
   - id: stitch-marker
     label: Stitch markers
     icon: /images/icons/stitch-marker.svg
+  # Thickness varies by pattern, so it isn't part of the label here — a
+  # pattern says which it needs with `- id: elastic-thread` + `detail: 2mm`.
+  - id: elastic-thread
+    label: Elastic thread
+    icon: /images/icons/yarn.svg

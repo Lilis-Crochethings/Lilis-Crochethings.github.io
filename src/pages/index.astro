@@ -7,6 +7,7 @@ import GalleryCard from '../components/main/GalleryCard.astro';
 import { getCollection } from 'astro:content';
 import { getEffectiveTags, getCreationAlt } from '../lib/tags';
 import { buildHomePreview } from '../lib/homePreview';
+import { listedPatterns } from '../lib/hiddenPatterns';
 
 const allCreations = (await getCollection('creations')).sort(
   (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0)
@@ -38,7 +39,7 @@ const creationPreviews = buildHomePreview(
 }));
 
 // Same date-desc-then-title tiebreak as patterns/index.astro's own sort.
-const allPatterns = (await getCollection('patterns')).sort((a, b) => {
+const allPatterns = listedPatterns(await getCollection('patterns')).sort((a, b) => {
   const dateDiff = (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0);
   if (dateDiff !== 0) return dateDiff;
   return a.data.title.localeCompare(b.data.title, undefined, { sensitivity: 'base' });
